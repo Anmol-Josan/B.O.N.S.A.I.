@@ -1,0 +1,27 @@
+seed: 7
+device: cpu
+
+model:
+  input_channels: 1
+  num_classes: 10
+  hidden_dim: 32
+  beta: 0.001
+
+continual:
+  tasks: 2
+  epochs_per_task: 5
+  saliency_quantile: 0.8
+  plateau_patience: 5
+  plateau_min_improvement: 0.01
+  junction_growth_ratio: 0.04
+  capacity_budget_ratio: 0.25
+
+data:
+  name: synthetic
+  samples_per_task: 128
+  batch_size: 32
+
+logging:
+  output_dir: results
+  use_wandb: false
+
