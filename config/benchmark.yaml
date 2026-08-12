@@ -1,0 +1,7 @@
+dataset: synthetic
+seeds: [7, 17, 27, 37, 47]
+epochs_per_task: 5
+samples_per_class: 32
+output_dir: results/toy_benchmark
+use_wandb: false
+

@@ -1,0 +1,8 @@
+variants:
+  - full
+  - no_ib
+  - no_orthogonal_rewire
+  - fixed_capacity
+seeds: [7, 17, 27, 37, 47]
+output_dir: results/ablations
+

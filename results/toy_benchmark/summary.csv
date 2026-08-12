@@ -1,0 +1,5 @@
+average_accuracy_mean,average_accuracy_std,critical_fraction_mean,critical_fraction_std,dataset,forgetting_mean,forgetting_std,method,parameter_overhead_percent_mean,parameter_overhead_percent_std,task_one_accuracy_after_mean,task_one_accuracy_after_std,task_one_accuracy_before_mean,task_one_accuracy_before_std,task_two_accuracy_mean,task_two_accuracy_std,variant
+1.0,0.0,0.25365853658536586,0.009907363908,synthetic,0.0,0.0,BONSAI,0.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0,fixed_capacity
+1.0,0.0,0.25365853658536586,0.009907363908,synthetic,0.0,0.0,BONSAI,0.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0,full
+1.0,0.0,0.40487804878048783,0.002987182613,synthetic,0.0,0.0,BONSAI,0.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0,no_ib
+0.9984375,0.003125,0.25365853658536586,0.009907363908,synthetic,0.0,0.0,BONSAI,0.0,0.0,1.0,0.0,1.0,0.0,0.996875,0.00625,no_orthogonal_rewire
