@@ -11,5 +11,17 @@ python -m pip install -e ".[dev]"
 pytest
 ```
 
-The benchmark scripts default to compact synthetic data. Dataset-backed runs and five-seed sweeps are explicit configuration choices so tests and development remain fast.
+The benchmark script defaults to compact synthetic data and runs BONSAI plus the three mandatory ablations across five seeds:
 
+```powershell
+python scripts/benchmark.py
+```
+
+Dataset-backed runs use the leakage-safe task factories and common ResNet-18 baseline runner:
+
+```powershell
+python scripts/benchmark.py --dataset cifar100 --data-root data/cifar100 --download
+python scripts/benchmark.py --dataset tinyimagenet --data-root data/tiny-imagenet-200
+```
+
+Results are written to the configured `results/` directory as CSV/JSON summaries and PNG plots. W&B logging is opt-in with `--wandb` and `WANDB_API_KEY`.
