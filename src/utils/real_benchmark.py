@@ -15,6 +15,7 @@ from src.algorithms.mask_manager import MaskManager
 from src.algorithms.rewire import RewireEngine
 from src.data.benchmarks import build_split_cifar100, build_split_tiny_imagenet
 from src.data.task_splits import ClassIncrementalTask
+from src.models.bonsai_resnet import BonsaiResNet18
 from src.utils.metrics import average_accuracy, forgetting_measure, parameter_overhead
 from src.utils.reproducibility import seed_everything
 from src.utils.results import save_records_csv, summarize_records, write_summary_artifacts
@@ -69,7 +70,7 @@ def load_real_tasks(config: RealBenchmarkConfig) -> list[ClassIncrementalTask]:
 
 def _make_model(method: str, num_classes: int) -> nn.Module:
     models = {
-        "BONSAI": lambda: ResNetBaseline(num_classes=num_classes),
+        "BONSAI": lambda: BonsaiResNet18(num_classes=num_classes),
         "EWC": lambda: EWC(num_classes=num_classes),
         "SI": lambda: SI(num_classes=num_classes),
         "PackNet": lambda: PackNet(num_classes=num_classes),
@@ -134,6 +135,8 @@ def run_real_method(
                 inputs, labels = inputs.to(device), labels.to(device)
                 optimizer.zero_grad(set_to_none=True)
                 loss = nn.functional.cross_entropy(_forward(model, inputs, task_id), labels)
+                if isinstance(model, BonsaiResNet18):
+                    loss = loss + model.beta * model.kl_loss
                 if ewc is not None:
                     loss = loss + ewc.ewc_penalty()
                 if si is not None:
@@ -223,4 +226,3 @@ def run_real_suite(config: RealBenchmarkConfig) -> tuple[list[dict], list[dict]]
     if first_masks:
         plot_mask_sparsity(first_masks, output_dir / "mask_sparsity.png")
     return records, summaries
-
