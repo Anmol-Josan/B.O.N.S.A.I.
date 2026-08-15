@@ -34,6 +34,9 @@ class RealBenchmarkConfig:
     num_workers: int = 0
     download: bool = False
     device: str = "cpu"
+    task_adapter_rank: int = 8
+    rewire_strength: float = 0.15
+    max_frozen_fraction: float | None = 0.65
 
 
 class GlobalLabelView(Dataset[tuple[Any, Tensor]]):
@@ -50,7 +53,9 @@ class GlobalLabelView(Dataset[tuple[Any, Tensor]]):
         return inputs, self.task.global_labels[index]
 
 
-def load_real_tasks(config: RealBenchmarkConfig) -> list[ClassIncrementalTask]:
+def load_real_tasks(
+    config: RealBenchmarkConfig, train: bool = True
+) -> list[ClassIncrementalTask]:
     try:
         from torchvision import transforms
     except ImportError as error:  # pragma: no cover - optional runtime
@@ -58,19 +63,21 @@ def load_real_tasks(config: RealBenchmarkConfig) -> list[ClassIncrementalTask]:
     if config.dataset == "cifar100":
         return build_split_cifar100(
             config.data_root,
-            train=True,
+            train=train,
             download=config.download,
             transform=transforms.ToTensor(),
         )
     if config.dataset == "tinyimagenet":
         transform = transforms.Compose([transforms.Resize((64, 64)), transforms.ToTensor()])
-        return build_split_tiny_imagenet(config.data_root, train=True, transform=transform)
+        return build_split_tiny_imagenet(config.data_root, train=train, transform=transform)
     raise ValueError("dataset must be 'cifar100' or 'tinyimagenet'")
 
 
-def _make_model(method: str, num_classes: int) -> nn.Module:
+def _make_model(method: str, num_classes: int, task_adapter_rank: int = 8) -> nn.Module:
     models = {
-        "BONSAI": lambda: BonsaiResNet18(num_classes=num_classes),
+        "BONSAI": lambda: BonsaiResNet18(
+            num_classes=num_classes, task_adapter_rank=task_adapter_rank
+        ),
         "EWC": lambda: EWC(num_classes=num_classes),
         "SI": lambda: SI(num_classes=num_classes),
         "PackNet": lambda: PackNet(num_classes=num_classes),
@@ -84,7 +91,29 @@ def _make_model(method: str, num_classes: int) -> nn.Module:
 def _forward(model: nn.Module, inputs: Tensor, task_id: int) -> Tensor:
     if isinstance(model, PNN):
         return model(inputs, task_id=task_id)
+    if isinstance(model, BonsaiResNet18):
+        return model(inputs, task_id=task_id)
     return model(inputs)
+
+
+def _mean_task_loss(
+    model: nn.Module,
+    dataset: Dataset,
+    task_id: int,
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> float:
+    loader = _loader(GlobalLabelView(dataset), config, shuffle=False)
+    total_loss = 0.0
+    total_count = 0
+    model.eval()
+    with torch.no_grad():
+        for inputs, labels in loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            loss = nn.functional.cross_entropy(_forward(model, inputs, task_id), labels)
+            total_loss += float(loss.item()) * labels.numel()
+            total_count += labels.numel()
+    return total_loss / total_count if total_count else 0.0
 
 
 def _loader(dataset: Dataset, config: RealBenchmarkConfig, shuffle: bool) -> DataLoader:
@@ -102,22 +131,33 @@ def run_real_method(
     tasks: list[ClassIncrementalTask],
     seed: int,
     config: RealBenchmarkConfig,
+    evaluation_tasks: list[ClassIncrementalTask] | None = None,
 ) -> tuple[dict, list[list[float]], dict[int, dict[str, Tensor]]]:
     """Train one method sequentially and return metrics, history, and masks."""
 
     seed_everything(seed)
     device = torch.device(config.device)
-    num_classes = len(tasks) * len(tasks[0].classes)
-    model = _make_model(method, num_classes).to(device)
+    evaluation_tasks = tasks if evaluation_tasks is None else evaluation_tasks
+    num_classes = len(evaluation_tasks) * len(evaluation_tasks[0].classes)
+    model = _make_model(method, num_classes, config.task_adapter_rank).to(device)
     initial_parameters = sum(parameter.numel() for parameter in model.parameters())
     ewc = model if isinstance(model, EWC) else None
     si = model if isinstance(model, SI) else None
     packnet = model if isinstance(model, PackNet) else None
-    bonsai_manager = MaskManager(saliency_quantile=0.8) if method == "BONSAI" else None
+    bonsai_manager = (
+        MaskManager(
+            saliency_quantile=0.8,
+            max_frozen_fraction=config.max_frozen_fraction,
+        )
+        if method == "BONSAI"
+        else None
+    )
     accuracy_history: list[list[float]] = []
     mask_history: dict[int, dict[str, Tensor]] = {}
 
     for task_id, task in enumerate(tasks):
+        if isinstance(model, BonsaiResNet18):
+            model.add_task_path()
         if isinstance(model, PNN) and task_id > 0:
             model.add_task_column()
         global_task = GlobalLabelView(task)
@@ -125,6 +165,8 @@ def run_real_method(
         optimizer_parameters = (
             list(model.columns[-1].parameters()) if isinstance(model, PNN) else list(model.parameters())
         )
+        if isinstance(model, BonsaiResNet18):
+            optimizer_parameters = model.task_parameters(task_id)
         optimizer = torch.optim.Adam(optimizer_parameters, lr=config.learning_rate)
         task_start = {
             name: parameter.detach().clone() for name, parameter in model.named_parameters()
@@ -145,6 +187,13 @@ def run_real_method(
                 if packnet is not None:
                     packnet.apply_gradient_masks()
                 optimizer.step()
+            if isinstance(model, BonsaiResNet18):
+                validation_loss = _mean_task_loss(model, task, task_id, config, device)
+                if model.record_validation_loss(validation_loss):
+                    optimizer = torch.optim.Adam(
+                        model.task_parameters(task_id), lr=config.learning_rate
+                    )
+                model.train()
         if ewc is not None:
             ewc.consolidate(_loader(global_task, config, shuffle=False), max_batches=32)
         if si is not None:
@@ -156,20 +205,38 @@ def run_real_method(
             inputs, labels = next(iter(_loader(global_task, config, shuffle=False)))
             inputs, labels = inputs.to(device), labels.to(device)
             model.zero_grad(set_to_none=True)
-            saliency_loss = nn.functional.cross_entropy(model(inputs), labels)
+            saliency_loss = nn.functional.cross_entropy(_forward(model, inputs, task_id), labels)
             saliency = bonsai_manager.compute_saliency(model, saliency_loss)
-            masks = bonsai_manager.build_critical_masks(saliency)
+            masks = bonsai_manager.build_critical_masks(
+                saliency,
+                excluded_masks=bonsai_manager.critical_masks,
+                total_parameter_count=sum(parameter.numel() for parameter in model.parameters()),
+            )
             bonsai_manager.freeze_critical(model, masks)
             mask_history[task_id + 1] = {
                 name: value.detach().cpu().clone() for name, value in bonsai_manager.critical_masks.items()
             }
             if task_id + 1 < len(tasks):
-                RewireEngine(strategy="orthogonal", seed=seed + task_id).rewire(
-                    model, bonsai_manager.critical_masks
+                excluded_names = {
+                    name
+                    for name, _ in model.named_parameters()
+                    if name.startswith("task_adapters.")
+                    or name.startswith("vib.logvar_layer.")
+                }
+                RewireEngine(
+                    strategy="orthogonal",
+                    seed=seed + task_id,
+                    strength=config.rewire_strength,
+                ).rewire(
+                    model,
+                    bonsai_manager.critical_masks,
+                    exclude_names=excluded_names,
                 )
         current_accuracies: list[float] = []
         for evaluation_task_id in range(task_id + 1):
-            evaluation_loader = _loader(GlobalLabelView(tasks[evaluation_task_id]), config, shuffle=False)
+            evaluation_loader = _loader(
+                GlobalLabelView(evaluation_tasks[evaluation_task_id]), config, shuffle=False
+            )
             correct = 0
             count = 0
             model.eval()
@@ -186,7 +253,7 @@ def run_real_method(
         "dataset": config.dataset,
         "method": method,
         "seed": seed,
-        "average_accuracy": average_accuracy(accuracy_history[-1]),
+            "average_accuracy": average_accuracy(accuracy_history[-1]),
         "forgetting": forgetting_measure(accuracy_history),
         "parameter_overhead_percent": parameter_overhead(
             initial_parameters, sum(parameter.numel() for parameter in model.parameters())
@@ -198,14 +265,17 @@ def run_real_method(
 def run_real_suite(config: RealBenchmarkConfig) -> tuple[list[dict], list[dict]]:
     """Run all five methods across all configured seeds on a real dataset."""
 
-    tasks = load_real_tasks(config)
+    tasks = load_real_tasks(config, train=True)
+    evaluation_tasks = load_real_tasks(config, train=False)
     methods = ("BONSAI", "EWC", "SI", "PackNet", "PNN")
     records: list[dict] = []
     histories: dict[str, list[list[list[float]]]] = {method: [] for method in methods}
     first_masks: dict[int, dict[str, Tensor]] = {}
     for method in methods:
         for seed in config.seeds:
-            record, history, masks = run_real_method(method, tasks, seed, config)
+            record, history, masks = run_real_method(
+                method, tasks, seed, config, evaluation_tasks=evaluation_tasks
+            )
             records.append(record)
             histories[method].append(history)
             if method == "BONSAI" and not first_masks:

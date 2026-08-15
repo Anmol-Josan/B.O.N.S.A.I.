@@ -23,7 +23,18 @@ def main() -> None:
     parser.add_argument("--classes-per-task", type=int, default=2)
     parser.add_argument("--input-dim", type=int, default=2)
     parser.add_argument("--hidden-dim", type=int, default=16)
+    parser.add_argument("--noise", type=float, default=0.35)
     parser.add_argument("--shared-encoder-updates", action="store_true")
+    parser.add_argument("--adapter-rank", type=int, default=1)
+    parser.add_argument("--encoder-learning-rate-scale", type=float, default=0.1)
+    parser.add_argument("--rewire-strength", type=float, default=0.15)
+    parser.add_argument("--max-frozen-fraction", type=float, default=0.65)
+    parser.add_argument(
+        "--route-strategy", choices=("entropy", "prototype", "hybrid"), default="prototype"
+    )
+    parser.add_argument("--task-adapter-rank", type=int, default=8)
+    parser.add_argument("--replay-per-task", type=int, default=16)
+    parser.add_argument("--replay-weight", type=float, default=0.5)
     parser.add_argument("--seeds", type=int, nargs="+", default=[7, 17, 27, 37, 47])
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--download", action="store_true")
@@ -38,7 +49,15 @@ def main() -> None:
                 classes_per_task=args.classes_per_task,
                 input_dim=args.input_dim,
                 hidden_dim=args.hidden_dim,
+                noise=args.noise,
                 shared_encoder_updates=args.shared_encoder_updates,
+                adapter_rank=args.adapter_rank,
+                encoder_learning_rate_scale=args.encoder_learning_rate_scale,
+                rewire_strength=args.rewire_strength,
+                max_frozen_fraction=args.max_frozen_fraction,
+                route_strategy=args.route_strategy,
+                replay_per_task=args.replay_per_task,
+                replay_weight=args.replay_weight,
                 output_dir=args.output_dir,
                 use_wandb=args.wandb,
             )
@@ -51,6 +70,9 @@ def main() -> None:
                 seeds=tuple(args.seeds),
                 epochs_per_task=args.epochs,
                 output_dir=args.output_dir,
+                task_adapter_rank=args.task_adapter_rank,
+                rewire_strength=args.rewire_strength,
+                max_frozen_fraction=args.max_frozen_fraction,
                 download=args.download,
             )
         )

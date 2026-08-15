@@ -64,3 +64,57 @@ def test_toy_learner_can_explicitly_update_shared_encoder_on_later_tasks() -> No
     learner.train_task(1, tasks[1], epochs=1, batch_size=8, update_encoder=True)
 
     assert not torch.equal(before, learner.encoder.mu_layer.weight.detach())
+
+
+def test_task_local_adapter_and_prototype_route_are_registered() -> None:
+    tasks = make_synthetic_tasks(
+        num_tasks=3, classes_per_task=2, samples_per_class=8, input_dim=12, seed=10
+    )
+    learner = ToyContinualLearner(
+        input_dim=12, hidden_dim=10, classes_per_task=2, num_tasks=3, adapter_rank=2
+    )
+    for task_id, task in enumerate(tasks):
+        learner.train_task(task_id, task, epochs=1, batch_size=8)
+        learner.register_task_route(task_id, task)
+
+    inputs = torch.cat([task.inputs[:2] for task in tasks])
+    predictions, selected_tasks, entropies = learner.predict_with_entropy(
+        inputs, route_strategy="hybrid"
+    )
+
+    assert learner.adapters[0].parameter_count == 40
+    assert learner.route_prototype_valid.all()
+    assert predictions.shape == (6,)
+    assert selected_tasks.min() >= 0 and selected_tasks.max() < 3
+    assert torch.isfinite(entropies).all()
+
+
+def test_lazy_task_paths_grow_capacity_only_when_tasks_arrive() -> None:
+    learner = ToyContinualLearner(
+        input_dim=6,
+        hidden_dim=8,
+        classes_per_task=2,
+        num_tasks=3,
+        adapter_rank=2,
+        lazy_task_paths=True,
+    )
+    initial = learner.total_parameters
+    learner.allocate_task_path(0)
+    assert learner.total_parameters == initial
+    learner.allocate_task_path(1)
+    assert learner.total_parameters > initial
+
+
+def test_replay_buffer_is_class_balanced_and_reusable() -> None:
+    task = make_synthetic_tasks(
+        num_tasks=1, classes_per_task=2, samples_per_class=8, input_dim=4, seed=11
+    )[0]
+    learner = ToyContinualLearner(
+        input_dim=4, hidden_dim=6, classes_per_task=2, num_tasks=1, replay_per_task=4
+    )
+    learner.store_replay(0, task)
+
+    assert len(learner.replay_memory) == 1
+    _, replay_inputs, replay_labels = learner.replay_memory[0]
+    assert replay_inputs.shape[0] == 4
+    assert torch.bincount(replay_labels, minlength=2).tolist() == [2, 2]

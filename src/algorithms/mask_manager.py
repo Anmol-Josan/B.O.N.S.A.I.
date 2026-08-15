@@ -17,10 +17,17 @@ class MaskManager:
     task cannot unfreeze an earlier task's subgraph.
     """
 
-    def __init__(self, saliency_quantile: float = 0.8) -> None:
+    def __init__(
+        self,
+        saliency_quantile: float = 0.8,
+        max_frozen_fraction: float | None = None,
+    ) -> None:
         if not 0.0 <= saliency_quantile <= 1.0:
             raise ValueError("saliency_quantile must be in [0, 1]")
+        if max_frozen_fraction is not None and not 0.0 <= max_frozen_fraction <= 1.0:
+            raise ValueError("max_frozen_fraction must be in [0, 1]")
         self.saliency_quantile = saliency_quantile
+        self.max_frozen_fraction = max_frozen_fraction
         self.critical_masks: dict[str, Tensor] = {}
         self._hook_handles: list[torch.utils.hooks.RemovableHandle] = []
 
@@ -37,19 +44,73 @@ class MaskManager:
         }
 
     def build_critical_masks(
-        self, saliency: Mapping[str, Tensor], quantile: float | None = None
+        self,
+        saliency: Mapping[str, Tensor],
+        quantile: float | None = None,
+        excluded_masks: Mapping[str, Tensor] | None = None,
+        max_new_fraction: float | None = None,
+        total_parameter_count: int | None = None,
     ) -> dict[str, Tensor]:
-        """Threshold saliency globally and select the requested top quantile."""
+        """Select salient, currently available parameter entries.
+
+        ``excluded_masks`` makes allocation non-overlapping across tasks.  This
+        is important for long sequences: repeatedly taking the top quantile of
+        the full tensor otherwise keeps rediscovering the same entries and can
+        consume the entire shared backbone.  ``max_frozen_fraction`` limits the
+        cumulative mask budget, while ``max_new_fraction`` limits one task's
+        allocation.
+        """
 
         quantile = self.saliency_quantile if quantile is None else quantile
         if not 0.0 <= quantile <= 1.0:
             raise ValueError("quantile must be in [0, 1]")
         if not saliency:
             return {}
+        if total_parameter_count is not None and total_parameter_count < 1:
+            raise ValueError("total_parameter_count must be positive")
         flattened = torch.cat([value.detach().reshape(-1) for value in saliency.values()])
-        keep_count = max(1, math.ceil((1.0 - quantile) * flattened.numel()))
+        available = torch.ones(flattened.numel(), dtype=torch.bool, device=flattened.device)
+        offset = 0
+        if excluded_masks is not None:
+            for name, value in saliency.items():
+                excluded = excluded_masks.get(name)
+                if excluded is not None:
+                    if excluded.shape != value.shape:
+                        raise ValueError(f"excluded mask shape does not match parameter {name}")
+                    size = value.numel()
+                    available[offset : offset + size] &= ~excluded.detach().to(
+                        device=flattened.device, dtype=torch.bool
+                    ).reshape(-1)
+                offset += value.numel()
+        available_count = int(available.sum().item())
+        if available_count == 0:
+            return {name: torch.zeros_like(value, dtype=torch.bool) for name, value in saliency.items()}
+
+        keep_count = max(1, math.ceil((1.0 - quantile) * available_count))
+        if max_new_fraction is not None:
+            if not 0.0 <= max_new_fraction <= 1.0:
+                raise ValueError("max_new_fraction must be in [0, 1]")
+            budget_total = flattened.numel() if total_parameter_count is None else total_parameter_count
+            keep_count = min(keep_count, math.floor(max_new_fraction * budget_total))
+        if self.max_frozen_fraction is not None:
+            total_count = (
+                flattened.numel()
+                if total_parameter_count is None
+                else total_parameter_count
+            )
+            current_count = min(self.frozen_parameter_count, total_count)
+            budget = math.floor(self.max_frozen_fraction * total_count) - current_count
+            keep_count = min(keep_count, max(0, budget))
+        if keep_count <= 0:
+            return {name: torch.zeros_like(value, dtype=torch.bool) for name, value in saliency.items()}
+
         selected = torch.zeros(flattened.numel(), dtype=torch.bool, device=flattened.device)
-        selected[torch.topk(flattened, k=keep_count, largest=True, sorted=False).indices] = True
+        available_indices = available.nonzero(as_tuple=False).flatten()
+        top_indices = torch.topk(
+            flattened[available_indices], k=min(keep_count, available_indices.numel()),
+            largest=True, sorted=False,
+        ).indices
+        selected[available_indices[top_indices]] = True
         masks: dict[str, Tensor] = {}
         offset = 0
         for name, value in saliency.items():

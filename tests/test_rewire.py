@@ -40,3 +40,16 @@ def test_gaussian_strategy_is_available_for_rewiring_ablation() -> None:
 
     assert not torch.equal(model.weight, before)
 
+
+def test_residual_rewire_preserves_bias_and_moves_available_weights_partway() -> None:
+    torch.manual_seed(4)
+    model = nn.Linear(4, 4, bias=True)
+    before_weight = model.weight.detach().clone()
+    before_bias = model.bias.detach().clone()
+    RewireEngine(strategy="orthogonal", seed=14, strength=0.2).rewire(
+        model, {"weight": torch.zeros_like(model.weight, dtype=torch.bool)}
+    )
+
+    assert torch.equal(model.bias.detach(), before_bias)
+    assert torch.any(model.weight.detach() != before_weight)
+    assert torch.linalg.vector_norm(model.weight - before_weight) < 2.0

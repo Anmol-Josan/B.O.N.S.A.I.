@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from collections.abc import Collection
 
 import torch
 from torch import Tensor, nn
@@ -42,18 +43,44 @@ def _orthogonal_tensor_like(parameter: Tensor, generator: torch.Generator | None
 class RewireEngine:
     """Rewire only non-critical entries while preserving frozen values."""
 
-    def __init__(self, strategy: str = "orthogonal", seed: int | None = None) -> None:
+    def __init__(
+        self,
+        strategy: str = "orthogonal",
+        seed: int | None = None,
+        strength: float = 1.0,
+        rewire_bias: bool = False,
+    ) -> None:
         if strategy not in {"orthogonal", "gaussian"}:
             raise ValueError("strategy must be 'orthogonal' or 'gaussian'")
+        if not 0.0 <= strength <= 1.0:
+            raise ValueError("strength must be in [0, 1]")
         self.strategy = strategy
         self.seed = seed
+        self.strength = strength
+        self.rewire_bias = rewire_bias
 
-    def rewire(self, model: nn.Module, frozen_masks: Mapping[str, Tensor]) -> list[str]:
-        """Reinitialize unfrozen entries and return the modified parameter names."""
+    def rewire(
+        self,
+        model: nn.Module,
+        frozen_masks: Mapping[str, Tensor],
+        exclude_names: Collection[str] | None = None,
+    ) -> list[str]:
+        """Reinitialize available entries and return modified parameter names.
+
+        A full-strength rewire retains the original behavior.  A smaller
+        ``strength`` performs a residual move toward the orthogonal candidate,
+        preserving useful representations while still changing the available
+        subgraph.  One-dimensional tensors (typically biases and VIB log-scale
+        terms) are preserved by default because reinitializing them can create
+        large, non-geometric shifts in activation statistics.
+        """
 
         changed: list[str] = []
+        excluded = set(exclude_names or ())
         for index, (name, parameter) in enumerate(model.named_parameters()):
             if not parameter.requires_grad:
+                continue
+            if name in excluded or (parameter.ndim < 2 and not self.rewire_bias):
                 continue
             frozen = frozen_masks.get(name)
             if frozen is None:
@@ -70,8 +97,9 @@ class RewireEngine:
                 candidate = _random_tensor_like(parameter, generator)
             with torch.no_grad():
                 original = parameter.detach().clone()
+                if self.strength < 1.0:
+                    candidate = original + self.strength * (candidate - original)
                 parameter.copy_(torch.where(frozen.to(parameter.device), original, candidate))
             if torch.any(~frozen):
                 changed.append(name)
         return changed
-

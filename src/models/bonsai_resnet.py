@@ -8,6 +8,7 @@ from torch import Tensor, nn
 
 from src.algorithms.baselines import build_resnet18
 from src.models.dynamic_resnet import ResidualJunction
+from src.models.adapters import BottleneckAdapter
 from src.models.vib_layers import VIBLinear
 
 
@@ -21,12 +22,16 @@ class BonsaiResNet18(nn.Module):
         plateau_patience: int = 5,
         plateau_min_improvement: float = 0.01,
         beta: float = 0.001,
+        task_adapter_rank: int = 8,
     ) -> None:
         super().__init__()
         self.backbone = build_resnet18(num_classes=num_classes)
         self.backbone.fc = nn.Identity()
         self.feature_dim = 512
         self.beta = beta
+        if task_adapter_rank < 0:
+            raise ValueError("task_adapter_rank must be nonnegative")
+        self.task_adapter_rank = task_adapter_rank
         self.junction_growth_ratio = junction_growth_ratio
         self.plateau_patience = plateau_patience
         self.plateau_min_improvement = plateau_min_improvement
@@ -34,6 +39,7 @@ class BonsaiResNet18(nn.Module):
         nn.init.constant_(self.vib.logvar_layer.weight, 0.0)
         nn.init.constant_(self.vib.logvar_layer.bias, -4.0)
         self.junctions = nn.ModuleList()
+        self.task_adapters = nn.ModuleList()
         self.classifier = nn.Linear(self.feature_dim, num_classes)
         self.initial_parameter_count = self.total_parameters
         self.best_validation_loss = math.inf
@@ -61,9 +67,38 @@ class BonsaiResNet18(nn.Module):
         )
 
     def expand(self) -> ResidualJunction:
-        junction = ResidualJunction(self.feature_dim, self._junction_hidden_dim())
+        device = next(self.parameters()).device
+        junction = ResidualJunction(self.feature_dim, self._junction_hidden_dim()).to(device)
         self.junctions.append(junction)
         return junction
+
+    def add_task_path(self) -> nn.Module | None:
+        """Allocate a small private residual adapter for one new task."""
+
+        if self.task_adapter_rank == 0:
+            self.task_adapters.append(nn.Identity())
+            return None
+        device = next(self.parameters()).device
+        adapter = BottleneckAdapter(self.feature_dim, self.task_adapter_rank).to(device)
+        self.task_adapters.append(adapter)
+        return adapter
+
+    def task_parameters(self, task_id: int) -> list[nn.Parameter]:
+        """Return shared parameters plus the current task's private adapter."""
+
+        if not 0 <= task_id < len(self.task_adapters):
+            raise IndexError(f"task path {task_id} has not been allocated")
+        current_adapter = {id(parameter) for parameter in self.task_adapters[task_id].parameters()}
+        adapter_parameter_ids = {
+            id(parameter)
+            for adapter in self.task_adapters
+            for parameter in adapter.parameters()
+        }
+        return [
+            parameter
+            for parameter in self.parameters()
+            if id(parameter) in current_adapter or id(parameter) not in adapter_parameter_ids
+        ]
 
     def record_validation_loss(self, validation_loss: float) -> bool:
         if not math.isfinite(validation_loss) or validation_loss < 0.0:
@@ -83,13 +118,16 @@ class BonsaiResNet18(nn.Module):
         self.plateau_epochs = 0
         return True
 
-    def forward_features(self, inputs: Tensor) -> Tensor:
+    def forward_features(self, inputs: Tensor, task_id: int | None = None) -> Tensor:
         features = self.backbone(inputs)
         features = self.vib(features)
         for junction in self.junctions:
             features = junction(features)
+        if task_id is not None:
+            if not 0 <= task_id < len(self.task_adapters):
+                raise IndexError(f"task path {task_id} has not been allocated")
+            features = self.task_adapters[task_id](features)
         return features
 
-    def forward(self, inputs: Tensor) -> Tensor:
-        return self.classifier(self.forward_features(inputs))
-
+    def forward(self, inputs: Tensor, task_id: int | None = None) -> Tensor:
+        return self.classifier(self.forward_features(inputs, task_id=task_id))

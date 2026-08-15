@@ -7,3 +7,8 @@ __pycache__/
 wandb/
 data/
 
+# Intermediate local scaling probes; committed benchmark artifacts use stable names.
+results/harder_scaling_10tasks_5classes/
+results/optimized_scaling_10tasks_5classes/
+results/optimized_scaling_10tasks_5classes_v2/
+results/optimized_scaling_10tasks_5classes_v3/

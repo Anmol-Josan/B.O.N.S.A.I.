@@ -81,3 +81,18 @@ def test_quantile_mask_selects_exact_top_k_when_saliency_values_tie() -> None:
     mask = manager.build_critical_masks(saliency)["w"]
 
     assert mask.sum().item() == 2
+
+
+def test_mask_allocation_excludes_previous_entries_and_honors_cumulative_budget() -> None:
+    manager = MaskManager(saliency_quantile=0.5, max_frozen_fraction=0.5)
+    first = manager.build_critical_masks({"w": torch.arange(8, dtype=torch.float32)})
+    manager.update_critical_masks(first)
+
+    second = manager.build_critical_masks(
+        {"w": torch.arange(8, dtype=torch.float32).flip(0)},
+        excluded_masks=manager.critical_masks,
+    )
+
+    assert not torch.any(first["w"] & second["w"])
+    manager.update_critical_masks(second)
+    assert manager.frozen_parameter_count <= 4

@@ -4,4 +4,10 @@ epochs_per_task: 5
 samples_per_class: 32
 output_dir: results/toy_benchmark
 use_wandb: false
-
+adapter_rank: 1
+encoder_learning_rate_scale: 0.1
+rewire_strength: 0.15
+max_frozen_fraction: 0.65
+route_strategy: prototype
+replay_per_task: 16
+replay_weight: 0.5
