@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import math
 
 import torch
 from torch import Tensor, nn
@@ -46,8 +47,16 @@ class MaskManager:
         if not saliency:
             return {}
         flattened = torch.cat([value.detach().reshape(-1) for value in saliency.values()])
-        threshold = torch.quantile(flattened, quantile)
-        return {name: value.detach().ge(threshold) for name, value in saliency.items()}
+        keep_count = max(1, math.ceil((1.0 - quantile) * flattened.numel()))
+        selected = torch.zeros(flattened.numel(), dtype=torch.bool, device=flattened.device)
+        selected[torch.topk(flattened, k=keep_count, largest=True, sorted=False).indices] = True
+        masks: dict[str, Tensor] = {}
+        offset = 0
+        for name, value in saliency.items():
+            size = value.numel()
+            masks[name] = selected[offset : offset + size].reshape(value.shape)
+            offset += size
+        return masks
 
     def update_critical_masks(self, masks: Mapping[str, Tensor]) -> None:
         """Accumulate masks from a new task without changing prior masks."""
@@ -98,4 +107,3 @@ class MaskManager:
     @property
     def frozen_parameter_count(self) -> int:
         return sum(mask.sum().item() for mask in self.critical_masks.values())
-

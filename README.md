@@ -24,4 +24,10 @@ python scripts/benchmark.py --dataset cifar100 --data-root data/cifar100 --downl
 python scripts/benchmark.py --dataset tinyimagenet --data-root data/tiny-imagenet-200
 ```
 
+For a larger shared-representation stress test:
+
+```powershell
+python scripts/benchmark.py --output-dir results/scaling_10tasks_5classes --seeds 7 17 27 --epochs 5 --samples-per-class 32 --num-tasks 10 --classes-per-task 5 --input-dim 20 --hidden-dim 64 --shared-encoder-updates
+```
+
 Results are written to the configured `results/` directory as CSV/JSON summaries and PNG plots. W&B logging is opt-in with `--wandb` and `WANDB_API_KEY`.

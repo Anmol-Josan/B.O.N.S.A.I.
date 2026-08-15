@@ -62,10 +62,13 @@ class ToyContinualLearner(nn.Module):
         epochs: int = 5,
         batch_size: int = 32,
         learning_rate: float = 0.2,
+        update_encoder: bool | None = None,
     ) -> None:
         if epochs < 1:
             raise ValueError("epochs must be positive")
-        if task_id == 0:
+        if update_encoder is None:
+            update_encoder = task_id == 0
+        if update_encoder:
             parameters = list(self.encoder.parameters()) + list(self.heads[task_id].parameters())
         else:
             parameters = list(self.heads[task_id].parameters())
@@ -77,7 +80,7 @@ class ToyContinualLearner(nn.Module):
                 optimizer.zero_grad(set_to_none=True)
                 logits = self.forward_task(task_id, inputs)
                 loss = nn.functional.cross_entropy(logits, labels)
-                if task_id == 0:
+                if update_encoder:
                     loss = loss + self.beta * self.encoder.kl_loss
                 loss.backward()
                 optimizer.step()
@@ -110,4 +113,3 @@ class ToyContinualLearner(nn.Module):
         if was_training:
             self.train()
         return global_predictions, selected_tasks, entropies
-

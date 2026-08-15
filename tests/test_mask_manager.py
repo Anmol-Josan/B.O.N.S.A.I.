@@ -73,3 +73,11 @@ def test_masks_can_be_accumulated_without_unfreezing_previous_tasks() -> None:
 
     assert torch.equal(manager.critical_masks["w"], torch.tensor([True, True, False]))
 
+
+def test_quantile_mask_selects_exact_top_k_when_saliency_values_tie() -> None:
+    manager = MaskManager(saliency_quantile=0.8)
+    saliency = {"w": torch.zeros(10)}
+
+    mask = manager.build_critical_masks(saliency)["w"]
+
+    assert mask.sum().item() == 2

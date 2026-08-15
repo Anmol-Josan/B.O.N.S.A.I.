@@ -26,6 +26,11 @@ class ToyBenchmarkConfig:
     seeds: tuple[int, ...] = (7, 17, 27, 37, 47)
     epochs_per_task: int = 5
     samples_per_class: int = 32
+    num_tasks: int = 2
+    classes_per_task: int = 2
+    input_dim: int = 2
+    hidden_dim: int = 16
+    shared_encoder_updates: bool = False
     output_dir: Path = Path("results/toy_benchmark")
     use_wandb: bool = False
 
@@ -37,48 +42,77 @@ def run_toy_bonsai(seed: int, variant: str, config: ToyBenchmarkConfig) -> dict:
         raise ValueError(f"unknown ablation variant: {variant}")
     seed_everything(seed)
     tasks = make_synthetic_tasks(
-        num_tasks=2,
-        classes_per_task=2,
+        num_tasks=config.num_tasks,
+        classes_per_task=config.classes_per_task,
         samples_per_class=config.samples_per_class,
+        input_dim=config.input_dim,
         seed=seed,
     )
     learner = ToyContinualLearner(
-        input_dim=2,
-        hidden_dim=16,
-        classes_per_task=2,
-        num_tasks=2,
+        input_dim=config.input_dim,
+        hidden_dim=config.hidden_dim,
+        classes_per_task=config.classes_per_task,
+        num_tasks=config.num_tasks,
         beta=0.0 if variant == "no_ib" else 0.001,
     )
     initial_parameters = learner.total_parameters
-    learner.train_task(0, tasks[0], epochs=config.epochs_per_task, batch_size=32)
-    task_one_before = learner.accuracy(0, tasks[0])
-
     manager = MaskManager(saliency_quantile=0.8)
-    if variant == "no_ib":
-        # Ablation A: remove the IB objective and use magnitude pruning.
-        saliency = {
-            name: parameter.detach().abs().clone()
-            for name, parameter in learner.named_parameters()
-            if parameter.requires_grad
-        }
-    else:
-        saliency = manager.compute_saliency(learner, learner.loss_on_task(0, tasks[0]))
-    masks = manager.build_critical_masks(saliency)
-    masks["heads.0.weight"] = torch.ones_like(learner.heads[0].weight, dtype=torch.bool)
-    masks["heads.0.bias"] = torch.ones_like(learner.heads[0].bias, dtype=torch.bool)
-    manager.freeze_critical(learner, masks)
     strategy = "gaussian" if variant == "no_orthogonal_rewire" else "orthogonal"
-    RewireEngine(strategy=strategy, seed=seed + 1).rewire(
-        learner.heads[1],
-        {
-            "weight": torch.zeros_like(learner.heads[1].weight, dtype=torch.bool),
-            "bias": torch.zeros_like(learner.heads[1].bias, dtype=torch.bool),
-        },
+    history: list[list[float]] = []
+    critical_fraction_curve: list[float] = []
+    for task_id, task in enumerate(tasks):
+        if task_id > 0:
+            if config.shared_encoder_updates:
+                encoder_masks = {
+                    name[len("encoder.") :]: mask
+                    for name, mask in manager.critical_masks.items()
+                    if name.startswith("encoder.")
+                }
+                RewireEngine(strategy=strategy, seed=seed + task_id).rewire(
+                    learner.encoder, encoder_masks
+                )
+            else:
+                RewireEngine(strategy=strategy, seed=seed + task_id).rewire(
+                    learner.heads[task_id],
+                    {
+                        "weight": torch.zeros_like(learner.heads[task_id].weight, dtype=torch.bool),
+                        "bias": torch.zeros_like(learner.heads[task_id].bias, dtype=torch.bool),
+                    },
+                )
+        learner.train_task(
+            task_id,
+            task,
+            epochs=config.epochs_per_task,
+            batch_size=32,
+            update_encoder=(task_id == 0 or config.shared_encoder_updates),
+        )
+        if variant == "no_ib":
+            # Ablation A: remove the IB objective and use magnitude pruning.
+            saliency = {
+                name: parameter.detach().abs().clone()
+                for name, parameter in learner.named_parameters()
+                if parameter.requires_grad
+            }
+        else:
+            saliency = manager.compute_saliency(learner, learner.loss_on_task(task_id, task))
+        masks = manager.build_critical_masks(saliency)
+        masks[f"heads.{task_id}.weight"] = torch.ones_like(
+            learner.heads[task_id].weight, dtype=torch.bool
+        )
+        masks[f"heads.{task_id}.bias"] = torch.ones_like(
+            learner.heads[task_id].bias, dtype=torch.bool
+        )
+        manager.freeze_critical(learner, masks)
+        critical_fraction_curve.append(manager.frozen_parameter_count / learner.total_parameters)
+        history.append([learner.accuracy(seen_id, tasks[seen_id]) for seen_id in range(task_id + 1)])
+    task_one_before = history[0][0]
+    task_one_after = history[-1][0]
+    task_two = history[-1][-1]
+    inputs = torch.cat([task.inputs for task in tasks])
+    expected_routes = torch.cat(
+        [torch.full((len(task),), task_id, dtype=torch.long) for task_id, task in enumerate(tasks)]
     )
-    learner.train_task(1, tasks[1], epochs=config.epochs_per_task, batch_size=32)
-    task_one_after = learner.accuracy(0, tasks[0])
-    task_two = learner.accuracy(1, tasks[1])
-    history = [[task_one_before], [task_one_after, task_two]]
+    _, selected_routes, _ = learner.predict_with_entropy(inputs)
     return {
         "dataset": "synthetic",
         "method": "BONSAI",
@@ -90,6 +124,9 @@ def run_toy_bonsai(seed: int, variant: str, config: ToyBenchmarkConfig) -> dict:
         "task_one_accuracy_before": task_one_before,
         "task_one_accuracy_after": task_one_after,
         "task_two_accuracy": task_two,
+        "route_accuracy": (selected_routes == expected_routes).float().mean().item(),
+        "accuracy_curve": [average_accuracy(row) for row in history],
+        "critical_fraction_curve": critical_fraction_curve,
         "critical_fraction": manager.frozen_parameter_count / learner.total_parameters,
     }
 
@@ -108,23 +145,35 @@ def run_toy_suite(config: ToyBenchmarkConfig) -> tuple[list[dict], list[dict]]:
     output_dir.mkdir(parents=True, exist_ok=True)
     save_records_csv(output_dir / "runs.csv", records)
     write_summary_artifacts(output_dir / "summary.json", summaries)
-    curves = {
-        variant: [
-            sum(record["task_one_accuracy_before"] for record in records if record["variant"] == variant)
-            / len(config.seeds),
-            sum(record["average_accuracy"] for record in records if record["variant"] == variant)
-            / len(config.seeds),
+    curves = {}
+    for variant in variants:
+        variant_records = [record for record in records if record["variant"] == variant]
+        max_tasks = max(len(record["accuracy_curve"]) for record in variant_records)
+        curves[variant] = [
+            sum(
+                record["accuracy_curve"][task_id]
+                for record in variant_records
+                if len(record["accuracy_curve"]) > task_id
+            )
+            / len(variant_records)
+            for task_id in range(max_tasks)
         ]
-        for variant in variants
-    }
     plot_accuracy_curves(curves, output_dir / "accuracy_curves.png", title="BONSAI toy ablations")
+    max_tasks = max(len(record["critical_fraction_curve"]) for record in records)
     mask_profiles = {
-        task: {
+        task_id + 1: {
             "critical_fraction": torch.tensor(
-                [sum(record["critical_fraction"] for record in records) / len(records)]
+                [
+                    sum(
+                        record["critical_fraction_curve"][task_id]
+                        for record in records
+                        if len(record["critical_fraction_curve"]) > task_id
+                    )
+                    / len(records)
+                ]
             )
         }
-        for task in (1, 2)
+        for task_id in range(max_tasks)
     }
     plot_mask_sparsity(mask_profiles, output_dir / "mask_sparsity.png")
     _log_to_wandb_if_available(records, summaries, config.use_wandb)

@@ -19,6 +19,11 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("results/toy_benchmark"))
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--samples-per-class", type=int, default=32)
+    parser.add_argument("--num-tasks", type=int, default=2)
+    parser.add_argument("--classes-per-task", type=int, default=2)
+    parser.add_argument("--input-dim", type=int, default=2)
+    parser.add_argument("--hidden-dim", type=int, default=16)
+    parser.add_argument("--shared-encoder-updates", action="store_true")
     parser.add_argument("--seeds", type=int, nargs="+", default=[7, 17, 27, 37, 47])
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--download", action="store_true")
@@ -29,6 +34,11 @@ def main() -> None:
                 seeds=tuple(args.seeds),
                 epochs_per_task=args.epochs,
                 samples_per_class=args.samples_per_class,
+                num_tasks=args.num_tasks,
+                classes_per_task=args.classes_per_task,
+                input_dim=args.input_dim,
+                hidden_dim=args.hidden_dim,
+                shared_encoder_updates=args.shared_encoder_updates,
                 output_dir=args.output_dir,
                 use_wandb=args.wandb,
             )

@@ -55,3 +55,12 @@ def test_two_task_sequence_retains_task_one_and_respects_capacity_budget() -> No
     assert entropies.shape == (8, 2)
     assert torch.isfinite(entropies).all()
 
+
+def test_toy_learner_can_explicitly_update_shared_encoder_on_later_tasks() -> None:
+    tasks = make_synthetic_tasks(num_tasks=2, classes_per_task=2, samples_per_class=8, seed=9)
+    learner = ToyContinualLearner(input_dim=2, hidden_dim=8, classes_per_task=2, num_tasks=2)
+    learner.train_task(0, tasks[0], epochs=1, batch_size=8)
+    before = learner.encoder.mu_layer.weight.detach().clone()
+    learner.train_task(1, tasks[1], epochs=1, batch_size=8, update_encoder=True)
+
+    assert not torch.equal(before, learner.encoder.mu_layer.weight.detach())
