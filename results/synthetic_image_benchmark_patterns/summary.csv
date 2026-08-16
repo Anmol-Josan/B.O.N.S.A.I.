@@ -1,0 +1,6 @@
+average_accuracy_mean,average_accuracy_std,dataset,forgetting_mean,forgetting_std,method,noise_mean,noise_std,parameter_overhead_percent_mean,parameter_overhead_percent_std,task_free_average_accuracy_mean,task_free_average_accuracy_std,task_free_forgetting_mean,task_free_forgetting_std,task_free_route_accuracy_mean,task_free_route_accuracy_std
+0.5,0.0,synthetic_images,0.0,0.0,BONSAI,0.1,0.0,0.04378977899061057,0.0,0.3333333333333333,0.0,0.3333333333333333,0.0,0.6666666666666666,0.0
+0.16666666666666666,0.0,synthetic_images,0.5277777777777778,0.0,EWC,0.1,0.0,0.0,0.0,0.16666666666666666,0.0,0.5277777777777778,0.0,,
+0.6666666666666666,0.0,synthetic_images,0.0,0.0,PNN,0.1,0.0,100.0,0.0,0.6527777777777777,0.0,0.02777777777777779,0.0,0.8194444444444444,0.0
+0.16666666666666666,0.0,synthetic_images,0.6666666666666666,0.0,PackNet,0.1,0.0,0.0,0.0,0.16666666666666666,0.0,0.6666666666666666,0.0,,
+0.3333333333333333,0.0,synthetic_images,0.6666666666666666,0.0,SI,0.1,0.0,0.0,0.0,0.3333333333333333,0.0,0.6666666666666666,0.0,,

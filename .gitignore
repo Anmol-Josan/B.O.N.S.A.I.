@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
+.coverage
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -12,3 +13,6 @@ results/harder_scaling_10tasks_5classes/
 results/optimized_scaling_10tasks_5classes/
 results/optimized_scaling_10tasks_5classes_v2/
 results/optimized_scaling_10tasks_5classes_v3/
+results/synthetic_image_benchmark/
+results/synthetic_image_benchmark_local_heads/
+results/synthetic_image_benchmark_4tasks/
