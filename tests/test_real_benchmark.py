@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import torch
 from torch.utils.data import TensorDataset
 
 from src.data.task_splits import split_dataset_by_classes
-from src.utils.real_benchmark import GlobalLabelView, limit_task_samples, split_task_views
+from src.models.bonsai_resnet import BonsaiResNet18
+from src.algorithms.baselines import PNN
+from src.utils.real_benchmark import (
+    GlobalLabelView,
+    RealBenchmarkConfig,
+    _forward,
+    _task_target,
+    bonsai_training_loss,
+    _fit_route_compatibility,
+    limit_task_samples,
+    split_task_views,
+)
 
 
 def test_real_runner_view_exposes_global_labels_without_changing_task_indices() -> None:
@@ -38,3 +51,58 @@ def test_limited_task_views_preserve_every_class_and_cap_samples() -> None:
     for task in limited:
         assert len(task) == 6
         assert torch.bincount(task.labels, minlength=2).tolist() == [3, 3]
+
+
+def test_bonsai_training_loss_includes_global_scaffold_gradient() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        global_loss_weight=1.0,
+    )
+    inputs = torch.randn(3, 3, 32, 32)
+    labels = torch.tensor([0, 1, 0])
+
+    loss = bonsai_training_loss(model, inputs, labels, task_id=0, classes_per_task=2, config=config)
+    loss.backward()
+
+    assert torch.isfinite(loss)
+    assert model.classifier.weight.grad is not None
+    assert model.classifier.weight.grad.abs().sum() > 0
+
+
+def test_route_compatibility_heads_fit_on_positive_and_negative_tasks() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        route_compatibility_epochs=1,
+    )
+    memory = [
+        (torch.randn(1, 3, 32, 32), 0),
+        (torch.randn(1, 3, 32, 32), 1),
+    ]
+
+    _fit_route_compatibility(model, memory, config, torch.device("cpu"))
+    predictions, selected_tasks, _ = model.predict_task_free(
+        torch.randn(2, 3, 32, 32), classes_per_task=2, route_strategy="compatibility"
+    )
+
+    assert predictions.shape == (2,)
+    assert selected_tasks.max() < 2
+
+
+def test_pnn_baseline_uses_local_task_class_slice() -> None:
+    model = PNN(num_classes=6)
+    model.add_task_column()
+    labels = torch.tensor([3, 4])
+    inputs = torch.randn(2, 3, 32, 32)
+
+    logits = _forward(model, inputs, task_id=1, classes_per_task=3)
+    targets = _task_target(model, labels, task_id=1, classes_per_task=3)
+
+    assert logits.shape == (2, 3)
+    assert targets.tolist() == [0, 1]

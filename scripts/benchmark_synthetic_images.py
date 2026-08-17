@@ -28,15 +28,22 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--task-adapter-rank", type=int, default=1)
     parser.add_argument("--validation-fraction", type=float, default=0.2)
+    parser.add_argument("--route-compatibility-epochs", type=int, default=3)
+    parser.add_argument("--route-hidden-dim", type=int, default=64)
     parser.add_argument(
         "--route-strategy",
-        choices=("entropy", "prototype", "hybrid", "learned"),
-        default="learned",
+        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility"),
+        default="compatibility",
+    )
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        choices=("BONSAI", "EWC", "SI", "PackNet", "PNN"),
+        default=["BONSAI", "EWC", "SI", "PackNet", "PNN"],
     )
     args = parser.parse_args()
-
-    methods = ("BONSAI", "EWC", "SI", "PackNet", "PNN")
     records: list[dict] = []
+    methods = tuple(args.methods)
     histories: dict[str, list[list[list[float]]]] = {method: [] for method in methods}
     first_masks = {}
     for seed in args.seeds:
@@ -62,6 +69,8 @@ def main() -> None:
             task_adapter_rank=args.task_adapter_rank,
             route_strategy=args.route_strategy,
             route_head_epochs=3,
+            route_compatibility_epochs=args.route_compatibility_epochs,
+            route_hidden_dim=args.route_hidden_dim,
         )
         for method in methods:
             record, history, masks = run_real_method(

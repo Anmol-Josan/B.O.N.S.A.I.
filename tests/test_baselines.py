@@ -53,3 +53,9 @@ def test_pnn_adds_a_new_column_for_each_task() -> None:
     assert model.total_parameters > initial
     assert model(torch.randn(2, 3, 32, 32), task_id=1).shape == (2, 3)
 
+
+def test_progressive_columns_can_use_task_local_heads() -> None:
+    model = PNN(num_classes=6, task_classes=3)
+    model.add_task_column()
+
+    assert model(torch.randn(2, 3, 32, 32), task_id=1).shape == (2, 3)

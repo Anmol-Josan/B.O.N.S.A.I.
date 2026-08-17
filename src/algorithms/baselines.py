@@ -153,11 +153,20 @@ class PackNet(ResNetBaseline):
 class PNN(nn.Module):
     """Progressive Neural Network with a frozen ResNet-18 column per task."""
 
-    def __init__(self, num_classes: int, input_channels: int = 3) -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        input_channels: int = 3,
+        task_classes: int | None = None,
+    ) -> None:
         super().__init__()
         self.input_channels = input_channels
         self.num_classes = num_classes
-        self.columns = nn.ModuleList([build_resnet18(num_classes, input_channels)])
+        if task_classes is not None and task_classes < 1:
+            raise ValueError("task_classes must be positive when provided")
+        self.task_classes = task_classes
+        output_classes = task_classes if task_classes is not None else num_classes
+        self.columns = nn.ModuleList([build_resnet18(output_classes, input_channels)])
 
     @property
     def backbone(self) -> nn.Module:
@@ -168,11 +177,11 @@ class PNN(nn.Module):
         return sum(parameter.numel() for parameter in self.parameters())
 
     def add_task_column(self) -> nn.Module:
-        column = build_resnet18(self.num_classes, self.input_channels)
+        output_classes = self.task_classes if self.task_classes is not None else self.num_classes
+        column = build_resnet18(output_classes, self.input_channels)
         self.columns.append(column)
         return column
 
     def forward(self, inputs: Tensor, task_id: int | None = None) -> Tensor:
         index = len(self.columns) - 1 if task_id is None else task_id
         return self.columns[index](inputs)
-

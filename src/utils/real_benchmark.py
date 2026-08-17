@@ -39,12 +39,19 @@ class RealBenchmarkConfig:
     max_frozen_fraction: float | None = 0.65
     validation_fraction: float = 0.1
     validation_seed: int = 0
-    route_strategy: str = "prototype"
+    route_strategy: str = "compatibility"
     prototype_weight: float = 1.0
     route_head_weight: float = 1.0
     route_calibration_samples: int = 256
     route_memory_samples: int = 64
     route_head_epochs: int = 3
+    route_compatibility_epochs: int = 3
+    route_hidden_dim: int = 64
+    global_loss_weight: float = 0.5
+    global_replay_per_task: int = 64
+    global_replay_weight: float = 0.5
+    shared_learning_rate_scale: float = 0.1
+    global_route_weight: float = 1.0
     max_samples_per_class: int | None = None
 
 
@@ -171,26 +178,37 @@ def _make_model(
     num_classes: int,
     task_adapter_rank: int = 8,
     classes_per_task: int | None = None,
+    route_hidden_dim: int = 64,
 ) -> nn.Module:
     models = {
         "BONSAI": lambda: BonsaiResNet18(
             num_classes=num_classes,
             task_adapter_rank=task_adapter_rank,
             classes_per_task=classes_per_task,
+            route_hidden_dim=route_hidden_dim,
         ),
         "EWC": lambda: EWC(num_classes=num_classes),
         "SI": lambda: SI(num_classes=num_classes),
         "PackNet": lambda: PackNet(num_classes=num_classes),
-        "PNN": lambda: PNN(num_classes=num_classes),
+        "PNN": lambda: PNN(num_classes=num_classes, task_classes=classes_per_task),
     }
     if method not in models:
         raise ValueError(f"unknown method {method}; expected {tuple(models)}")
     return models[method]()
 
 
-def _forward(model: nn.Module, inputs: Tensor, task_id: int) -> Tensor:
+def _forward(
+    model: nn.Module,
+    inputs: Tensor,
+    task_id: int,
+    classes_per_task: int | None = None,
+) -> Tensor:
     if isinstance(model, PNN):
-        return model(inputs, task_id=task_id)
+        logits = model(inputs, task_id=task_id)
+        if classes_per_task is None or logits.shape[-1] == classes_per_task:
+            return logits
+        start = task_id * classes_per_task
+        return logits[:, start : start + classes_per_task]
     if isinstance(model, BonsaiResNet18):
         return model.task_logits(inputs, task_id=task_id)
     return model(inputs)
@@ -201,9 +219,32 @@ def _task_target(
 ) -> Tensor:
     """Use local labels for BONSAI heads and global labels for baselines."""
 
-    if isinstance(model, BonsaiResNet18) and model.classes_per_task is not None:
+    if isinstance(model, (BonsaiResNet18, PNN)):
         return labels - task_id * classes_per_task
     return labels
+
+
+def bonsai_training_loss(
+    model: BonsaiResNet18,
+    inputs: Tensor,
+    global_labels: Tensor,
+    task_id: int,
+    classes_per_task: int,
+    config: RealBenchmarkConfig,
+) -> Tensor:
+    """Train a local task path while retaining a shared global scaffold."""
+
+    local_logits = model.task_logits(inputs, task_id=task_id)
+    local_loss = nn.functional.cross_entropy(
+        local_logits,
+        _task_target(model, global_labels, task_id, classes_per_task),
+    )
+    loss = local_loss
+    if config.global_loss_weight > 0.0:
+        loss = loss + config.global_loss_weight * nn.functional.cross_entropy(
+            model(inputs), global_labels
+        )
+    return loss + model.beta * model.kl_loss
 
 
 def _mean_task_loss(
@@ -221,7 +262,7 @@ def _mean_task_loss(
         for inputs, labels in loader:
             inputs, labels = inputs.to(device), labels.to(device)
             loss = nn.functional.cross_entropy(
-                _forward(model, inputs, task_id),
+                _forward(model, inputs, task_id, len(dataset.classes)),
                 _task_target(model, labels, task_id, len(dataset.classes)),
             )
             total_loss += float(loss.item()) * labels.numel()
@@ -291,6 +332,51 @@ def _fit_route_head(
         model.train()
 
 
+def _fit_route_compatibility(
+    model: BonsaiResNet18,
+    route_memory: list[tuple[Tensor, int]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> None:
+    """Fit one-vs-rest path discriminators on bounded route memory."""
+
+    if not route_memory:
+        return
+    if config.route_compatibility_epochs < 1:
+        raise ValueError("route_compatibility_epochs must be positive")
+    was_training = model.training
+    model.eval()
+    with torch.no_grad():
+        feature_cache = [
+            [
+                model.forward_features(inputs.to(device), task_id=task_id).detach()
+                for inputs, _ in route_memory
+            ]
+            for task_id in range(len(model.task_adapters))
+        ]
+    optimizer = torch.optim.Adam(model.route_compatibility_heads.parameters(), lr=config.learning_rate)
+    for _ in range(config.route_compatibility_epochs):
+        optimizer.zero_grad(set_to_none=True)
+        losses: list[Tensor] = []
+        for task_id, task_features in enumerate(feature_cache):
+            head = model.route_compatibility_heads[task_id]
+            for memory_id, features in enumerate(task_features):
+                targets = torch.full(
+                    (features.shape[0],),
+                    float(memory_id == task_id),
+                    device=device,
+                )
+                losses.append(
+                    nn.functional.binary_cross_entropy_with_logits(
+                        head(features).squeeze(-1), targets
+                    )
+                )
+        torch.stack(losses).mean().backward()
+        optimizer.step()
+    if was_training:
+        model.train()
+
+
 def _task_free_predict(
     model: nn.Module,
     inputs: Tensor,
@@ -307,6 +393,7 @@ def _task_free_predict(
             route_strategy=config.route_strategy,
             prototype_weight=config.prototype_weight,
             route_head_weight=config.route_head_weight,
+            global_route_weight=config.global_route_weight,
         )
     if isinstance(model, PNN):
         if task_count < 1 or task_count > len(model.columns):
@@ -316,13 +403,16 @@ def _task_free_predict(
         logits = torch.stack(
             [model(inputs, task_id=task_id) for task_id in range(task_count)], dim=1
         )
-        local_logits = torch.stack(
-            [
-                logits[:, task_id, task_id * classes_per_task : (task_id + 1) * classes_per_task]
-                for task_id in range(task_count)
-            ],
-            dim=1,
-        )
+        if logits.shape[-1] == classes_per_task:
+            local_logits = logits
+        else:
+            local_logits = torch.stack(
+                [
+                    logits[:, task_id, task_id * classes_per_task : (task_id + 1) * classes_per_task]
+                    for task_id in range(task_count)
+                ],
+                dim=1,
+            )
         probabilities = local_logits.softmax(dim=-1)
         entropies = -(probabilities * probabilities.clamp_min(1e-8).log()).sum(dim=-1)
         selected_tasks = entropies.argmin(dim=1)
@@ -369,6 +459,14 @@ def run_real_method(
     evaluation_tasks = tasks if evaluation_tasks is None else evaluation_tasks
     if validation_tasks is not None and len(validation_tasks) != len(tasks):
         raise ValueError("validation_tasks must have the same number of tasks as tasks")
+    if config.global_loss_weight < 0.0:
+        raise ValueError("global_loss_weight must be nonnegative")
+    if config.global_replay_per_task < 0:
+        raise ValueError("global_replay_per_task must be nonnegative")
+    if config.global_replay_weight < 0.0:
+        raise ValueError("global_replay_weight must be nonnegative")
+    if config.shared_learning_rate_scale < 0.0:
+        raise ValueError("shared_learning_rate_scale must be nonnegative")
     classes_per_task = len(tasks[0].classes)
     num_classes = len(evaluation_tasks) * len(evaluation_tasks[0].classes)
     model = _make_model(
@@ -376,6 +474,7 @@ def run_real_method(
         num_classes,
         config.task_adapter_rank,
         classes_per_task=classes_per_task,
+        route_hidden_dim=config.route_hidden_dim,
     ).to(device)
     initial_parameters = sum(parameter.numel() for parameter in model.parameters())
     ewc = model if isinstance(model, EWC) else None
@@ -393,6 +492,7 @@ def run_real_method(
     task_free_accuracy_history: list[list[float]] = []
     mask_history: dict[int, dict[str, Tensor]] = {}
     route_memory: list[tuple[Tensor, int]] = []
+    global_replay: list[tuple[Tensor, Tensor]] = []
 
     for task_id, task in enumerate(tasks):
         if isinstance(model, BonsaiResNet18):
@@ -406,22 +506,44 @@ def run_real_method(
             list(model.columns[-1].parameters()) if isinstance(model, PNN) else list(model.parameters())
         )
         if isinstance(model, BonsaiResNet18):
-            optimizer_parameters = model.task_parameters(task_id)
+            optimizer_parameters = model.task_parameter_groups(
+                task_id,
+                learning_rate=config.learning_rate,
+                shared_learning_rate_scale=config.shared_learning_rate_scale,
+            )
         optimizer = torch.optim.Adam(optimizer_parameters, lr=config.learning_rate)
         task_start = {
             name: parameter.detach().clone() for name, parameter in model.named_parameters()
         }
         model.train()
-        for _ in range(config.epochs_per_task):
-            for inputs, labels in training_loader:
+        if isinstance(model, PNN):
+            for previous_column in model.columns[:-1]:
+                previous_column.eval()
+            model.columns[-1].train()
+        for epoch_index in range(config.epochs_per_task):
+            for batch_index, (inputs, labels) in enumerate(training_loader):
                 inputs, labels = inputs.to(device), labels.to(device)
                 optimizer.zero_grad(set_to_none=True)
-                loss = nn.functional.cross_entropy(
-                    _forward(model, inputs, task_id),
-                    _task_target(model, labels, task_id, classes_per_task),
-                )
                 if isinstance(model, BonsaiResNet18):
-                    loss = loss + model.beta * model.kl_loss
+                    loss = bonsai_training_loss(
+                        model, inputs, labels, task_id, classes_per_task, config
+                    )
+                    if global_replay and config.global_replay_weight > 0.0:
+                        replay_inputs, replay_labels = global_replay[
+                            (batch_index + epoch_index) % len(global_replay)
+                        ]
+                        replay_inputs = replay_inputs.to(device)
+                        replay_labels = replay_labels.to(device)
+                        loss = loss + (
+                            config.global_loss_weight
+                            * config.global_replay_weight
+                            * nn.functional.cross_entropy(model(replay_inputs), replay_labels)
+                        )
+                else:
+                    loss = nn.functional.cross_entropy(
+                        _forward(model, inputs, task_id, classes_per_task),
+                        _task_target(model, labels, task_id, classes_per_task),
+                    )
                 if ewc is not None:
                     loss = loss + ewc.ewc_penalty()
                 if si is not None:
@@ -456,12 +578,20 @@ def run_real_method(
             memory_inputs = route_inputs[: config.route_memory_samples].detach().cpu()
             route_memory.append((memory_inputs, task_id))
             _fit_route_head(model, route_memory, config, device)
+            _fit_route_compatibility(model, route_memory, config, device)
+            if config.global_replay_per_task > 0:
+                global_replay.append(
+                    (
+                        route_inputs[: config.global_replay_per_task].detach().cpu(),
+                        route_labels[: config.global_replay_per_task].detach().cpu(),
+                    )
+                )
         if bonsai_manager is not None:
             inputs, labels = next(iter(_loader(global_task, config, shuffle=False)))
             inputs, labels = inputs.to(device), labels.to(device)
             model.zero_grad(set_to_none=True)
             saliency_loss = nn.functional.cross_entropy(
-                _forward(model, inputs, task_id),
+                _forward(model, inputs, task_id, classes_per_task),
                 _task_target(model, labels, task_id, classes_per_task),
             )
             saliency = bonsai_manager.compute_saliency(model, saliency_loss)
@@ -479,6 +609,11 @@ def run_real_method(
                     name
                     for name, _ in model.named_parameters()
                     if name.startswith("task_adapters.")
+                    or name.startswith("task_stage_adapters.")
+                    or name.startswith("task_heads.")
+                    or name.startswith("route_compatibility_heads.")
+                    or name.startswith("route_head.")
+                    or name.startswith("classifier.")
                     or name.startswith("vib.logvar_layer.")
                 }
                 RewireEngine(
@@ -504,7 +639,9 @@ def run_real_method(
             with torch.no_grad():
                 for inputs, labels in evaluation_loader:
                     inputs, labels = inputs.to(device), labels.to(device)
-                    predictions = _forward(model, inputs, evaluation_task_id).argmax(dim=1)
+                    predictions = _forward(
+                        model, inputs, evaluation_task_id, classes_per_task
+                    ).argmax(dim=1)
                     target = _task_target(
                         model, labels, evaluation_task_id, classes_per_task
                     )

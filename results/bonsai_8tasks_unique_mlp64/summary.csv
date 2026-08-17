@@ -1,0 +1,2 @@
+average_accuracy_mean,average_accuracy_std,dataset,forgetting_mean,forgetting_std,method,noise_mean,noise_std,parameter_overhead_percent_mean,parameter_overhead_percent_std,task_free_average_accuracy_mean,task_free_average_accuracy_std,task_free_forgetting_mean,task_free_forgetting_std,task_free_route_accuracy_mean,task_free_route_accuracy_std
+0.828125,0.0,synthetic_images,-0.12500000000000003,0.0,BONSAI,0.1,0.0,3.15487650022529,0.0,0.6927083333333334,0.0,-0.3869047619047619,0.0,0.8489583333333334,0.0

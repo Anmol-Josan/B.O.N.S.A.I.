@@ -25,6 +25,7 @@ class BonsaiResNet18(nn.Module):
         beta: float = 0.001,
         task_adapter_rank: int = 8,
         classes_per_task: int | None = None,
+        route_hidden_dim: int = 0,
     ) -> None:
         super().__init__()
         self.backbone = build_resnet18(num_classes=num_classes)
@@ -35,8 +36,11 @@ class BonsaiResNet18(nn.Module):
             raise ValueError("task_adapter_rank must be nonnegative")
         if classes_per_task is not None and classes_per_task < 1:
             raise ValueError("classes_per_task must be positive when provided")
+        if route_hidden_dim < 0:
+            raise ValueError("route_hidden_dim must be nonnegative")
         self.task_adapter_rank = task_adapter_rank
         self.classes_per_task = classes_per_task
+        self.route_hidden_dim = route_hidden_dim
         self.junction_growth_ratio = junction_growth_ratio
         self.plateau_patience = plateau_patience
         self.plateau_min_improvement = plateau_min_improvement
@@ -47,6 +51,7 @@ class BonsaiResNet18(nn.Module):
         self.task_adapters = nn.ModuleList()
         self.task_stage_adapters = nn.ModuleList()
         self.task_heads = nn.ModuleList()
+        self.route_compatibility_heads = nn.ModuleList()
         self.num_tasks = (
             num_classes // classes_per_task
             if classes_per_task is not None and num_classes % classes_per_task == 0
@@ -115,6 +120,16 @@ class BonsaiResNet18(nn.Module):
             self.task_heads.append(
                 nn.Linear(self.feature_dim, self.classes_per_task).to(device)
             )
+        device = next(self.parameters()).device
+        if self.route_hidden_dim == 0:
+            compatibility_head: nn.Module = nn.Linear(self.feature_dim, 1)
+        else:
+            compatibility_head = nn.Sequential(
+                nn.Linear(self.feature_dim, self.route_hidden_dim),
+                nn.GELU(),
+                nn.Linear(self.route_hidden_dim, 1),
+            )
+        self.route_compatibility_heads.append(compatibility_head.to(device))
         return adapter
 
     def task_parameters(self, task_id: int) -> list[nn.Parameter]:
@@ -128,6 +143,9 @@ class BonsaiResNet18(nn.Module):
         )
         if self.classes_per_task is not None:
             current_adapter.update(id(parameter) for parameter in self.task_heads[task_id].parameters())
+        current_adapter.update(
+            id(parameter) for parameter in self.route_compatibility_heads[task_id].parameters()
+        )
         adapter_parameter_ids = {
             id(parameter)
             for adapter in self.task_adapters
@@ -143,11 +161,51 @@ class BonsaiResNet18(nn.Module):
             for head in self.task_heads
             for parameter in head.parameters()
         )
+        adapter_parameter_ids.update(
+            id(parameter)
+            for head in self.route_compatibility_heads
+            for parameter in head.parameters()
+        )
         return [
             parameter
             for parameter in self.parameters()
             if id(parameter) in current_adapter or id(parameter) not in adapter_parameter_ids
         ]
+
+    def task_parameter_groups(
+        self,
+        task_id: int,
+        learning_rate: float,
+        shared_learning_rate_scale: float = 1.0,
+    ) -> list[dict[str, object]]:
+        """Separate shared-scaffold and current-path optimization rates."""
+
+        if learning_rate <= 0.0:
+            raise ValueError("learning_rate must be positive")
+        if shared_learning_rate_scale < 0.0:
+            raise ValueError("shared_learning_rate_scale must be nonnegative")
+        if not 0 <= task_id < len(self.task_adapters):
+            raise IndexError(f"task path {task_id} has not been allocated")
+        current_ids = {id(parameter) for parameter in self.task_adapters[task_id].parameters()}
+        current_ids.update(
+            id(parameter) for parameter in self.task_stage_adapters[task_id].parameters()
+        )
+        if self.classes_per_task is not None:
+            current_ids.update(id(parameter) for parameter in self.task_heads[task_id].parameters())
+        current_ids.update(
+            id(parameter) for parameter in self.route_compatibility_heads[task_id].parameters()
+        )
+        task_parameters = self.task_parameters(task_id)
+        current = [parameter for parameter in task_parameters if id(parameter) in current_ids]
+        shared = [parameter for parameter in task_parameters if id(parameter) not in current_ids]
+        groups: list[dict[str, object]] = []
+        if shared and shared_learning_rate_scale > 0.0:
+            groups.append({"params": shared, "lr": learning_rate * shared_learning_rate_scale})
+        if current:
+            groups.append({"params": current, "lr": learning_rate})
+        if not groups:
+            raise ValueError("task path has no trainable parameters")
+        return groups
 
     def task_logits(self, inputs: Tensor, task_id: int) -> Tensor:
         """Return logits from a task-local head when one is configured."""
@@ -256,6 +314,7 @@ class BonsaiResNet18(nn.Module):
         route_strategy: str = "prototype",
         prototype_weight: float = 1.0,
         route_head_weight: float = 1.0,
+        global_route_weight: float = 1.0,
     ) -> tuple[Tensor, Tensor, Tensor]:
         """Predict global classes without receiving a task ID.
 
@@ -265,9 +324,16 @@ class BonsaiResNet18(nn.Module):
         it could never own.
         """
 
-        if route_strategy not in {"entropy", "prototype", "hybrid", "learned"}:
+        if route_strategy not in {
+            "entropy",
+            "prototype",
+            "hybrid",
+            "learned",
+            "scaffold",
+            "compatibility",
+        }:
             raise ValueError(
-                "route_strategy must be 'entropy', 'prototype', 'hybrid', or 'learned'"
+                "route_strategy must be entropy, prototype, hybrid, learned, scaffold, or compatibility"
             )
         if classes_per_task < 1:
             raise ValueError("classes_per_task must be positive")
@@ -275,6 +341,8 @@ class BonsaiResNet18(nn.Module):
             raise ValueError("prototype_weight must be nonnegative")
         if route_head_weight < 0.0:
             raise ValueError("route_head_weight must be nonnegative")
+        if global_route_weight < 0.0:
+            raise ValueError("global_route_weight must be nonnegative")
         if not self.task_adapters:
             raise RuntimeError("no task paths have been allocated")
         if self.classes_per_task is not None and self.classes_per_task != classes_per_task:
@@ -302,8 +370,23 @@ class BonsaiResNet18(nn.Module):
             and len(self._route_prototypes) == len(self.task_adapters)
             and all(valid.any() for valid in self._route_valid)
         )
+        needs_shared_features = use_prototypes or route_strategy in {"learned", "scaffold"}
+        shared_features = self.forward_features(inputs) if needs_shared_features else None
+        global_log_prob = None
+        global_task_log_mass = None
+        if shared_features is not None and self.classifier.out_features >= len(self.task_adapters) * classes_per_task:
+            global_log_prob = self.classifier(shared_features).log_softmax(dim=-1)
+            global_task_log_mass = torch.stack(
+                [
+                    torch.logsumexp(
+                        global_log_prob[:, task_id * classes_per_task : (task_id + 1) * classes_per_task],
+                        dim=-1,
+                    )
+                    for task_id in range(len(self.task_adapters))
+                ],
+                dim=1,
+            )
         if use_prototypes:
-            shared_features = self.forward_features(inputs)
             routed_features = torch.stack(
                 [
                     self.forward_features(inputs, task_id=task_id)
@@ -338,17 +421,52 @@ class BonsaiResNet18(nn.Module):
                         self.task_adapters
                     )].log_softmax(dim=-1)
                     scores = scores - route_head_weight * route_log_prob
-        elif route_strategy == "learned" and self.route_head is not None:
-            if self.route_head.out_features < len(self.task_adapters):
-                raise ValueError("route head size does not match allocated task paths")
-            scores = -self.route_logits_from_features(self.forward_features(inputs))[
-                :, : len(self.task_adapters)
-            ].log_softmax(dim=-1)
+                if global_task_log_mass is not None:
+                    scores = scores - global_route_weight * global_task_log_mass
+        elif route_strategy == "compatibility":
+            compatibility_logits = torch.stack(
+                [
+                    self.route_compatibility_heads[task_id](
+                        self.forward_features(inputs, task_id=task_id)
+                    ).squeeze(-1)
+                    for task_id in range(len(self.task_adapters))
+                ],
+                dim=1,
+            )
+            scores = -compatibility_logits
+        elif route_strategy in {"learned", "scaffold"}:
+            if route_strategy == "learned" and self.route_head is None:
+                scores = entropies
+            else:
+                scores = torch.zeros_like(entropies)
+                if route_strategy == "learned":
+                    if self.route_head.out_features < len(self.task_adapters):
+                        raise ValueError("route head size does not match allocated task paths")
+                    scores = scores - route_head_weight * self.route_logits_from_features(
+                        shared_features
+                    )[:, : len(self.task_adapters)].log_softmax(dim=-1)
+                if global_task_log_mass is not None:
+                    scores = scores - global_route_weight * global_task_log_mass
+                else:
+                    scores = entropies
         else:
             scores = entropies
         selected_tasks = scores.argmin(dim=1)
         batch_indices = torch.arange(inputs.shape[0], device=inputs.device)
-        selected_local = local_logits[batch_indices, selected_tasks].argmax(dim=1)
+        if route_strategy == "scaffold" and global_log_prob is not None:
+            selected_global_logits = self.classifier(shared_features)
+            local_predictions = torch.stack(
+                [
+                    selected_global_logits[
+                        :, task_id * classes_per_task : (task_id + 1) * classes_per_task
+                    ]
+                    for task_id in range(len(self.task_adapters))
+                ],
+                dim=1,
+            )
+            selected_local = local_predictions[batch_indices, selected_tasks].argmax(dim=1)
+        else:
+            selected_local = local_logits[batch_indices, selected_tasks].argmax(dim=1)
         global_predictions = selected_tasks * classes_per_task + selected_local
         if was_training:
             self.train()

@@ -51,9 +51,21 @@ python scripts/benchmark_synthetic_images.py --output-dir results/synthetic_imag
 ```
 
 BONSAI trains the shared ResNet representation together with the current task's
-low-rank stage adapters and local head, adds the VIB KL term, then allocates a
+low-rank stage adapters and local head, adds the VIB KL term, and retains a
+global class-scaffold objective with bounded rehearsal. It then allocates a
 non-overlapping saliency mask and rewires only available shared weights. A
-bounded calibration memory trains the task router; evaluation reports both
-task-conditioned accuracy and the stricter task-ID-free accuracy.
+small one-vs-rest compatibility discriminator is fit for each task path from
+bounded positive/negative exemplars; this is the recommended task-ID-free
+router because raw entropy is not calibrated across paths.
+
+For the stronger routing configuration used in the larger stress comparison:
+
+```powershell
+python scripts/benchmark_synthetic_images.py --output-dir results/bonsai_3seed_compatibility_rank4_4tasks --seeds 7 17 27 --num-tasks 4 --classes-per-task 3 --epochs 5 --noise 0.1 --task-adapter-rank 4 --route-strategy compatibility --route-compatibility-epochs 10 --methods BONSAI
+```
+
+The current-source comparison artifacts are stored in
+`results/bonsai_3seed_current_4tasks`, `results/pnn_3seed_current_bnfixed_4tasks`,
+`results/bonsai_8tasks_unique_mlp64`, and `results/pnn_8tasks_unique_bnfixed`.
 
 Results are written to the configured `results/` directory as CSV/JSON summaries and PNG plots. W&B logging is opt-in with `--wandb` and `WANDB_API_KEY`.

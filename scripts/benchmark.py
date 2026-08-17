@@ -36,8 +36,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--real-route-strategy",
-        choices=("entropy", "prototype", "hybrid", "learned"),
-        default="learned",
+        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility"),
+        default="compatibility",
     )
     parser.add_argument("--task-adapter-rank", type=int, default=8)
     parser.add_argument("--replay-per-task", type=int, default=16)
@@ -48,6 +48,13 @@ def main() -> None:
     parser.add_argument("--route-calibration-samples", type=int, default=256)
     parser.add_argument("--route-memory-samples", type=int, default=64)
     parser.add_argument("--route-head-epochs", type=int, default=3)
+    parser.add_argument("--route-compatibility-epochs", type=int, default=3)
+    parser.add_argument("--route-hidden-dim", type=int, default=64)
+    parser.add_argument("--global-loss-weight", type=float, default=0.5)
+    parser.add_argument("--global-replay-per-task", type=int, default=64)
+    parser.add_argument("--global-replay-weight", type=float, default=0.5)
+    parser.add_argument("--shared-learning-rate-scale", type=float, default=0.1)
+    parser.add_argument("--global-route-weight", type=float, default=1.0)
     parser.add_argument("--max-samples-per-class", type=int, default=None)
     parser.add_argument("--seeds", type=int, nargs="+", default=[7, 17, 27, 37, 47])
     parser.add_argument("--wandb", action="store_true")
@@ -96,6 +103,13 @@ def main() -> None:
                 route_calibration_samples=args.route_calibration_samples,
                 route_memory_samples=args.route_memory_samples,
                 route_head_epochs=args.route_head_epochs,
+                route_compatibility_epochs=args.route_compatibility_epochs,
+                route_hidden_dim=args.route_hidden_dim,
+                global_loss_weight=args.global_loss_weight,
+                global_replay_per_task=args.global_replay_per_task,
+                global_replay_weight=args.global_replay_weight,
+                shared_learning_rate_scale=args.shared_learning_rate_scale,
+                global_route_weight=args.global_route_weight,
                 max_samples_per_class=args.max_samples_per_class,
                 download=args.download,
             )

@@ -64,6 +64,11 @@ def test_bonsai_can_route_real_image_features_without_a_task_id() -> None:
     )
     assert learned_predictions.shape == (4,)
     assert learned_tasks.max() < 2
+    compatibility_predictions, compatibility_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="compatibility"
+    )
+    assert compatibility_predictions.shape == (4,)
+    assert compatibility_tasks.max() < 2
 
 
 def test_bonsai_real_mode_uses_private_local_heads() -> None:
@@ -74,6 +79,49 @@ def test_bonsai_real_mode_uses_private_local_heads() -> None:
 
     assert model.task_logits(inputs, 0).shape == (2, 3)
     assert model.task_logits(inputs, 1).shape == (2, 3)
+
+
+def test_bonsai_real_mode_keeps_a_trainable_global_scaffold() -> None:
+    torch.manual_seed(3)
+    model = BonsaiResNet18(num_classes=6, classes_per_task=3, task_adapter_rank=1)
+    model.add_task_path()
+    inputs = torch.randn(3, 3, 32, 32)
+    global_logits = model(inputs)
+    loss = torch.nn.functional.cross_entropy(global_logits, torch.tensor([0, 1, 2]))
+    loss.backward()
+
+    assert global_logits.shape == (3, 6)
+    assert model.classifier.weight.grad is not None
+    assert any(parameter is model.classifier.weight for parameter in model.task_parameters(0))
+
+
+def test_task_parameter_groups_keep_old_paths_out_of_the_optimizer() -> None:
+    model = BonsaiResNet18(num_classes=6, classes_per_task=3, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    groups = model.task_parameter_groups(1, learning_rate=0.01, shared_learning_rate_scale=0.1)
+    optimized = {
+        id(parameter)
+        for group in groups
+        for parameter in group["params"]
+    }
+
+    assert id(next(model.route_compatibility_heads[0].parameters())) not in optimized
+    assert id(next(model.route_compatibility_heads[1].parameters())) in optimized
+    assert id(model.classifier.weight) in optimized
+
+
+def test_bonsai_supports_compact_nonlinear_route_heads() -> None:
+    model = BonsaiResNet18(
+        num_classes=6,
+        classes_per_task=3,
+        task_adapter_rank=1,
+        route_hidden_dim=8,
+    )
+    model.add_task_path()
+    logits = model.route_compatibility_heads[0](torch.randn(2, 512))
+
+    assert logits.shape == (2, 1)
 
 
 def test_bonsai_growth_tracker_resets_between_tasks() -> None:

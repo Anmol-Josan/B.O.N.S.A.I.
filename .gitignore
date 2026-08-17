@@ -16,3 +16,12 @@ results/optimized_scaling_10tasks_5classes_v3/
 results/synthetic_image_benchmark/
 results/synthetic_image_benchmark_local_heads/
 results/synthetic_image_benchmark_4tasks/
+results/synthetic_image_benchmark_4tasks_optimized/
+results/bonsai_sweep_*/
+results/bonsai_3seed_*/
+results/pnn_*/
+results/bonsai_8tasks_mlp64/
+results/bonsai_8tasks_rank4/
+results/bonsai_8tasks_rank4_compat10/
+results/ewc_si_packnet_3seed_4tasks_5epochs/
+results/synthetic_image_benchmark_4tasks_optimized/

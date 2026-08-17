@@ -9,6 +9,7 @@ encoder_learning_rate_scale: 0.1
 rewire_strength: 0.15
 max_frozen_fraction: 0.65
 route_strategy: prototype
+real_route_strategy: compatibility
 replay_per_task: 16
 replay_weight: 0.5
 validation_fraction: 0.1
@@ -16,5 +17,12 @@ prototype_weight: 1.0
 route_calibration_samples: 256
 route_memory_samples: 64
 route_head_epochs: 3
+route_compatibility_epochs: 3
+route_hidden_dim: 64
 route_head_weight: 1.0
+global_loss_weight: 0.5
+global_replay_per_task: 64
+global_replay_weight: 0.5
+shared_learning_rate_scale: 0.1
+global_route_weight: 1.0
 max_samples_per_class: null

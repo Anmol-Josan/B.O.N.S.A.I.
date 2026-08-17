@@ -1,0 +1,2 @@
+average_accuracy_mean,average_accuracy_std,dataset,forgetting_mean,forgetting_std,method,noise_mean,noise_std,parameter_overhead_percent_mean,parameter_overhead_percent_std,task_free_average_accuracy_mean,task_free_average_accuracy_std,task_free_forgetting_mean,task_free_forgetting_std,task_free_route_accuracy_mean,task_free_route_accuracy_std
+0.46064814814814814,0.087902025676,synthetic_images,0.0,0.0,PNN,0.10000000000000002,0.0,300.0,0.0,0.10185185185185186,0.026189140044,0.23456790123456792,0.106201546507,0.24305555555555555,0.009820927516
