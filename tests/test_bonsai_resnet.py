@@ -69,6 +69,26 @@ def test_bonsai_can_route_real_image_features_without_a_task_id() -> None:
     )
     assert compatibility_predictions.shape == (4,)
     assert compatibility_tasks.max() < 2
+    global_predictions, global_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="global_argmax"
+    )
+    assert global_predictions.shape == (4,)
+    assert global_tasks.max() < 2
+    energy_predictions, energy_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="local_energy"
+    )
+    assert energy_predictions.shape == (4,)
+    assert energy_tasks.max() < 2
+    direct_predictions, direct_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="global_direct"
+    )
+    assert direct_predictions.shape == (4,)
+    assert direct_tasks.max() < 2
+    cosine_predictions, cosine_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="cosine"
+    )
+    assert cosine_predictions.shape == (4,)
+    assert cosine_tasks.max() < 2
 
 
 def test_bonsai_real_mode_uses_private_local_heads() -> None:
@@ -95,6 +115,25 @@ def test_bonsai_real_mode_keeps_a_trainable_global_scaffold() -> None:
     assert any(parameter is model.classifier.weight for parameter in model.task_parameters(0))
 
 
+def test_task_free_compatibility_route_reuses_cached_path_features(monkeypatch) -> None:
+    model = BonsaiResNet18(num_classes=6, classes_per_task=3, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    calls = 0
+    original_forward_features = model.forward_features
+
+    def counted_forward_features(inputs, task_id=None):
+        nonlocal calls
+        calls += 1
+        return original_forward_features(inputs, task_id=task_id)
+
+    monkeypatch.setattr(model, "forward_features", counted_forward_features)
+    model.predict_task_free(
+        torch.randn(2, 3, 32, 32), classes_per_task=3, route_strategy="compatibility"
+    )
+    assert calls == 2
+
+
 def test_task_parameter_groups_keep_old_paths_out_of_the_optimizer() -> None:
     model = BonsaiResNet18(num_classes=6, classes_per_task=3, task_adapter_rank=1)
     model.add_task_path()
@@ -111,6 +150,21 @@ def test_task_parameter_groups_keep_old_paths_out_of_the_optimizer() -> None:
     assert id(model.classifier.weight) in optimized
 
 
+def test_task_parameter_groups_can_accelerate_the_global_classifier_separately() -> None:
+    model = BonsaiResNet18(num_classes=6, classes_per_task=3, task_adapter_rank=1)
+    model.add_task_path()
+    groups = model.task_parameter_groups(
+        0,
+        learning_rate=0.01,
+        shared_learning_rate_scale=0.1,
+        classifier_learning_rate_scale=1.0,
+    )
+    classifier_group = next(
+        group for group in groups if id(model.classifier.weight) in {id(p) for p in group["params"]}
+    )
+    assert classifier_group["lr"] == 0.01
+
+
 def test_bonsai_supports_compact_nonlinear_route_heads() -> None:
     model = BonsaiResNet18(
         num_classes=6,
@@ -122,6 +176,18 @@ def test_bonsai_supports_compact_nonlinear_route_heads() -> None:
     logits = model.route_compatibility_heads[0](torch.randn(2, 512))
 
     assert logits.shape == (2, 1)
+
+
+def test_bonsai_uses_a_nonlinear_shared_route_gate_when_configured() -> None:
+    model = BonsaiResNet18(
+        num_classes=6,
+        classes_per_task=3,
+        task_adapter_rank=1,
+        route_hidden_dim=8,
+    )
+    assert isinstance(model.route_head, torch.nn.Sequential)
+    assert model.route_head_output_features == 2
+    assert model.route_logits_from_features(torch.randn(2, 512)).shape == (2, 2)
 
 
 def test_bonsai_growth_tracker_resets_between_tasks() -> None:

@@ -23,6 +23,11 @@ route_head_weight: 1.0
 global_loss_weight: 0.5
 global_replay_per_task: 64
 global_replay_weight: 0.5
+global_head_epochs: 0
 shared_learning_rate_scale: 0.1
 global_route_weight: 1.0
+route_training_weight: 0.0
+route_replay_per_task: 16
+classifier_learning_rate_scale: 1.0
+freeze_backbone_bn: false
 max_samples_per_class: null

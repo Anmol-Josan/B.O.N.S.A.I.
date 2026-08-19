@@ -57,9 +57,20 @@ class BonsaiResNet18(nn.Module):
             if classes_per_task is not None and num_classes % classes_per_task == 0
             else 0
         )
-        self.route_head = (
-            nn.Linear(self.feature_dim, self.num_tasks) if self.num_tasks > 0 else None
-        )
+        if self.num_tasks <= 0:
+            self.route_head = None
+        elif route_hidden_dim > 0:
+            # A nonlinear gate is still tiny relative to ResNet-18, but can
+            # separate task manifolds that are not linearly separable in the
+            # shared bottleneck. The same hidden width is reused by the compact
+            # compatibility heads below.
+            self.route_head = nn.Sequential(
+                nn.Linear(self.feature_dim, route_hidden_dim),
+                nn.GELU(),
+                nn.Linear(route_hidden_dim, self.num_tasks),
+            )
+        else:
+            self.route_head = nn.Linear(self.feature_dim, self.num_tasks)
         self.classifier = nn.Linear(self.feature_dim, num_classes)
         self._route_prototypes: list[Tensor] = []
         self._route_valid: list[Tensor] = []
@@ -177,6 +188,7 @@ class BonsaiResNet18(nn.Module):
         task_id: int,
         learning_rate: float,
         shared_learning_rate_scale: float = 1.0,
+        classifier_learning_rate_scale: float = 1.0,
     ) -> list[dict[str, object]]:
         """Separate shared-scaffold and current-path optimization rates."""
 
@@ -184,6 +196,8 @@ class BonsaiResNet18(nn.Module):
             raise ValueError("learning_rate must be positive")
         if shared_learning_rate_scale < 0.0:
             raise ValueError("shared_learning_rate_scale must be nonnegative")
+        if classifier_learning_rate_scale < 0.0:
+            raise ValueError("classifier_learning_rate_scale must be nonnegative")
         if not 0 <= task_id < len(self.task_adapters):
             raise IndexError(f"task path {task_id} has not been allocated")
         current_ids = {id(parameter) for parameter in self.task_adapters[task_id].parameters()}
@@ -195,12 +209,22 @@ class BonsaiResNet18(nn.Module):
         current_ids.update(
             id(parameter) for parameter in self.route_compatibility_heads[task_id].parameters()
         )
+        classifier_ids = {id(parameter) for parameter in self.classifier.parameters()}
         task_parameters = self.task_parameters(task_id)
         current = [parameter for parameter in task_parameters if id(parameter) in current_ids]
-        shared = [parameter for parameter in task_parameters if id(parameter) not in current_ids]
+        classifier = [parameter for parameter in task_parameters if id(parameter) in classifier_ids]
+        shared = [
+            parameter
+            for parameter in task_parameters
+            if id(parameter) not in current_ids and id(parameter) not in classifier_ids
+        ]
         groups: list[dict[str, object]] = []
         if shared and shared_learning_rate_scale > 0.0:
             groups.append({"params": shared, "lr": learning_rate * shared_learning_rate_scale})
+        if classifier and classifier_learning_rate_scale > 0.0:
+            groups.append(
+                {"params": classifier, "lr": learning_rate * classifier_learning_rate_scale}
+            )
         if current:
             groups.append({"params": current, "lr": learning_rate})
         if not groups:
@@ -230,6 +254,22 @@ class BonsaiResNet18(nn.Module):
         if self.route_head is None:
             raise RuntimeError("route head requires classes_per_task at construction")
         return self.route_head(features)
+
+    @property
+    def route_head_output_features(self) -> int:
+        """Return the task-logit width for either linear or MLP route heads."""
+
+        if self.route_head is None:
+            return 0
+        if isinstance(self.route_head, nn.Linear):
+            return self.route_head.out_features
+        last_layer = next(
+            (layer for layer in reversed(list(self.route_head.modules())) if isinstance(layer, nn.Linear)),
+            None,
+        )
+        if last_layer is None:  # pragma: no cover - defensive for custom heads
+            raise RuntimeError("route_head must end in a linear task classifier")
+        return last_layer.out_features
 
     def record_validation_loss(self, validation_loss: float) -> bool:
         if not math.isfinite(validation_loss) or validation_loss < 0.0:
@@ -331,9 +371,14 @@ class BonsaiResNet18(nn.Module):
             "learned",
             "scaffold",
             "compatibility",
+            "fused",
+            "global_argmax",
+            "local_energy",
+            "global_direct",
+            "cosine",
         }:
             raise ValueError(
-                "route_strategy must be entropy, prototype, hybrid, learned, scaffold, or compatibility"
+                "route_strategy must be entropy, prototype, hybrid, learned, scaffold, compatibility, fused, global_argmax, local_energy, global_direct, or cosine"
             )
         if classes_per_task < 1:
             raise ValueError("classes_per_task must be positive")
@@ -349,20 +394,29 @@ class BonsaiResNet18(nn.Module):
             raise ValueError("classes_per_task does not match the model's task heads")
         was_training = self.training
         self.eval()
-        logits = torch.stack(
-            [self.task_logits(inputs, task_id=task_id) for task_id in range(len(self.task_adapters))],
+        path_features = torch.stack(
+            [
+                self.forward_features(inputs, task_id=task_id)
+                for task_id in range(len(self.task_adapters))
+            ],
             dim=1,
         )
-        if logits.shape[-1] != classes_per_task:
+        if self.classes_per_task is None:
             local_logits = torch.stack(
                 [
-                    logits[:, task_id, task_id * classes_per_task : (task_id + 1) * classes_per_task]
+                    self.classifier(path_features[:, task_id])
                     for task_id in range(len(self.task_adapters))
                 ],
                 dim=1,
             )
         else:
-            local_logits = logits
+            local_logits = torch.stack(
+                [
+                    self.task_heads[task_id](path_features[:, task_id])
+                    for task_id in range(len(self.task_adapters))
+                ],
+                dim=1,
+            )
         probabilities = local_logits.softmax(dim=-1)
         entropies = -(probabilities * probabilities.clamp_min(1e-8).log()).sum(dim=-1)
         use_prototypes = (
@@ -370,12 +424,20 @@ class BonsaiResNet18(nn.Module):
             and len(self._route_prototypes) == len(self.task_adapters)
             and all(valid.any() for valid in self._route_valid)
         )
-        needs_shared_features = use_prototypes or route_strategy in {"learned", "scaffold"}
+        needs_shared_features = use_prototypes or route_strategy in {
+            "learned",
+            "scaffold",
+            "fused",
+            "global_argmax",
+            "global_direct",
+        }
         shared_features = self.forward_features(inputs) if needs_shared_features else None
+        global_logits = None
         global_log_prob = None
         global_task_log_mass = None
         if shared_features is not None and self.classifier.out_features >= len(self.task_adapters) * classes_per_task:
-            global_log_prob = self.classifier(shared_features).log_softmax(dim=-1)
+            global_logits = self.classifier(shared_features)
+            global_log_prob = global_logits.log_softmax(dim=-1)
             global_task_log_mass = torch.stack(
                 [
                     torch.logsumexp(
@@ -387,13 +449,7 @@ class BonsaiResNet18(nn.Module):
                 dim=1,
             )
         if use_prototypes:
-            routed_features = torch.stack(
-                [
-                    self.forward_features(inputs, task_id=task_id)
-                    for task_id in range(len(self.task_adapters))
-                ],
-                dim=1,
-            )
+            routed_features = path_features
             prototypes = torch.stack(
                 [prototype.to(device=inputs.device) for prototype in self._route_prototypes], dim=0
             )
@@ -414,7 +470,7 @@ class BonsaiResNet18(nn.Module):
                     torch.tensor(float(classes_per_task), device=inputs.device)
                 ).clamp_min(1e-8)
                 scores = distances + prototype_weight * entropies / entropy_scale
-                if self.route_head is not None and self.route_head.out_features >= len(
+                if self.route_head is not None and self.route_head_output_features >= len(
                     self.task_adapters
                 ):
                     route_log_prob = self.route_logits_from_features(shared_features)[:, : len(
@@ -423,24 +479,81 @@ class BonsaiResNet18(nn.Module):
                     scores = scores - route_head_weight * route_log_prob
                 if global_task_log_mass is not None:
                     scores = scores - global_route_weight * global_task_log_mass
-        elif route_strategy == "compatibility":
+        elif route_strategy in {"compatibility", "fused"}:
             compatibility_logits = torch.stack(
                 [
                     self.route_compatibility_heads[task_id](
-                        self.forward_features(inputs, task_id=task_id)
+                        path_features[:, task_id]
                     ).squeeze(-1)
                     for task_id in range(len(self.task_adapters))
                 ],
                 dim=1,
             )
-            scores = -compatibility_logits
+            if route_strategy == "compatibility":
+                scores = -compatibility_logits
+            else:
+                # Fuse independently calibrated evidence sources. Standardizing
+                # each source per sample prevents an overconfident head from
+                # dominating merely because its raw logit scale is larger.
+                def standardize(values: Tensor) -> Tensor:
+                    centered = values - values.mean(dim=1, keepdim=True)
+                    return centered / values.std(
+                        dim=1, keepdim=True, unbiased=False
+                    ).clamp_min(1e-4)
+
+                scores = -standardize(compatibility_logits)
+                if self.route_head is not None:
+                    route_log_prob = self.route_logits_from_features(
+                        shared_features
+                    )[:, : len(self.task_adapters)].log_softmax(dim=-1)
+                    scores = scores - route_head_weight * standardize(route_log_prob)
+                if global_task_log_mass is not None:
+                    scores = scores - global_route_weight * standardize(global_task_log_mass)
+                entropy_scale = torch.log(
+                    torch.tensor(float(classes_per_task), device=inputs.device)
+                ).clamp_min(1e-8)
+                scores = scores + prototype_weight * entropies / entropy_scale
+        elif route_strategy == "global_argmax":
+            if global_logits is None:
+                scores = entropies
+            else:
+                scores = torch.stack(
+                    [
+                        global_logits[
+                            :,
+                            task_id * classes_per_task : (task_id + 1) * classes_per_task,
+                        ].max(dim=-1).values
+                        for task_id in range(len(self.task_adapters))
+                    ],
+                    dim=1,
+                )
+                scores = -scores
+        elif route_strategy == "local_energy":
+            scores = -torch.logsumexp(local_logits, dim=-1)
+        elif route_strategy == "cosine":
+            cosine_scores = []
+            for task_id in range(len(self.task_adapters)):
+                features = path_features[:, task_id]
+                weight = (
+                    self.classifier.weight
+                    if self.classes_per_task is None
+                    else self.task_heads[task_id].weight
+                )
+                normalized_features = features / features.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+                normalized_weight = weight / weight.norm(
+                    dim=-1, keepdim=True
+                ).clamp_min(1e-8)
+                cosine_scores.append(
+                    (normalized_features @ normalized_weight.t()).max(dim=-1).values
+                )
+            scores = -torch.stack(cosine_scores, dim=1)
         elif route_strategy in {"learned", "scaffold"}:
             if route_strategy == "learned" and self.route_head is None:
                 scores = entropies
             else:
                 scores = torch.zeros_like(entropies)
                 if route_strategy == "learned":
-                    if self.route_head.out_features < len(self.task_adapters):
+                    if self.route_head_output_features < len(self.task_adapters):
                         raise ValueError("route head size does not match allocated task paths")
                     scores = scores - route_head_weight * self.route_logits_from_features(
                         shared_features
@@ -453,7 +566,10 @@ class BonsaiResNet18(nn.Module):
             scores = entropies
         selected_tasks = scores.argmin(dim=1)
         batch_indices = torch.arange(inputs.shape[0], device=inputs.device)
-        if route_strategy == "scaffold" and global_log_prob is not None:
+        if route_strategy == "global_direct" and global_logits is not None:
+            global_predictions = global_logits.argmax(dim=1)
+            selected_tasks = global_predictions // classes_per_task
+        elif route_strategy == "scaffold" and global_log_prob is not None:
             selected_global_logits = self.classifier(shared_features)
             local_predictions = torch.stack(
                 [
@@ -465,9 +581,10 @@ class BonsaiResNet18(nn.Module):
                 dim=1,
             )
             selected_local = local_predictions[batch_indices, selected_tasks].argmax(dim=1)
+            global_predictions = selected_tasks * classes_per_task + selected_local
         else:
             selected_local = local_logits[batch_indices, selected_tasks].argmax(dim=1)
-        global_predictions = selected_tasks * classes_per_task + selected_local
+            global_predictions = selected_tasks * classes_per_task + selected_local
         if was_training:
             self.train()
         return global_predictions, selected_tasks, entropies

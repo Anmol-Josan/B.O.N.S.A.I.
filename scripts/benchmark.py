@@ -43,7 +43,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--real-route-strategy",
-        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility"),
+        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility", "fused", "global_argmax", "local_energy", "global_direct", "cosine"),
         default="compatibility",
     )
     parser.add_argument("--task-adapter-rank", type=int, default=8)
@@ -60,8 +60,13 @@ def main() -> None:
     parser.add_argument("--global-loss-weight", type=float, default=0.5)
     parser.add_argument("--global-replay-per-task", type=int, default=64)
     parser.add_argument("--global-replay-weight", type=float, default=0.5)
+    parser.add_argument("--global-head-epochs", type=int, default=0)
     parser.add_argument("--shared-learning-rate-scale", type=float, default=0.1)
+    parser.add_argument("--classifier-learning-rate-scale", type=float, default=1.0)
+    parser.add_argument("--freeze-backbone-bn", action="store_true")
     parser.add_argument("--global-route-weight", type=float, default=1.0)
+    parser.add_argument("--route-training-weight", type=float, default=0.0)
+    parser.add_argument("--route-replay-per-task", type=int, default=16)
     parser.add_argument("--max-samples-per-class", type=int, default=None)
     parser.add_argument("--seeds", type=int, nargs="+", default=[7, 17, 27, 37, 47])
     parser.add_argument("--wandb", action="store_true")
@@ -117,8 +122,13 @@ def main() -> None:
                 global_loss_weight=args.global_loss_weight,
                 global_replay_per_task=args.global_replay_per_task,
                 global_replay_weight=args.global_replay_weight,
+                global_head_epochs=args.global_head_epochs,
                 shared_learning_rate_scale=args.shared_learning_rate_scale,
+                classifier_learning_rate_scale=args.classifier_learning_rate_scale,
+                freeze_backbone_bn=args.freeze_backbone_bn,
                 global_route_weight=args.global_route_weight,
+                route_training_weight=args.route_training_weight,
+                route_replay_per_task=args.route_replay_per_task,
                 max_samples_per_class=args.max_samples_per_class,
                 download=args.download,
             )

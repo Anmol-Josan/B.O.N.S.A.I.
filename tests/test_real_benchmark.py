@@ -15,9 +15,13 @@ from src.utils.real_benchmark import (
     _task_target,
     bonsai_training_loss,
     _fit_route_compatibility,
+    bonsai_route_training_loss,
+    _fit_global_head,
+    _freeze_backbone_batchnorm,
     limit_task_samples,
     split_task_views,
     resolve_device,
+    balanced_sample_positions,
 )
 
 
@@ -42,6 +46,12 @@ def test_real_benchmark_method_selection_rejects_empty_or_unknown_methods() -> N
 
 def test_resolve_device_keeps_cpu_path_available() -> None:
     assert resolve_device("cpu") == torch.device("cpu")
+
+
+def test_balanced_route_sampling_covers_classes_round_robin() -> None:
+    labels = torch.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+    positions = balanced_sample_positions(labels, max_samples=5)
+    assert labels[positions].tolist() == [0, 1, 2, 0, 1]
 
 
 def test_real_runner_view_exposes_global_labels_without_changing_task_indices() -> None:
@@ -94,6 +104,52 @@ def test_bonsai_training_loss_includes_global_scaffold_gradient() -> None:
     assert torch.isfinite(loss)
     assert model.classifier.weight.grad is not None
     assert model.classifier.weight.grad.abs().sum() > 0
+
+
+def test_bonsai_route_training_loss_replays_prior_task_route_memory() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        route_training_weight=1.0,
+        route_replay_per_task=2,
+    )
+    inputs = torch.randn(3, 3, 32, 32)
+    memory = [(torch.randn(2, 3, 32, 32), 0)]
+    loss = bonsai_route_training_loss(
+        model, inputs, task_id=1, route_memory=memory, config=config, device=torch.device("cpu")
+    )
+    loss.backward()
+    assert torch.isfinite(loss)
+    assert next(model.route_head.parameters()).grad is not None
+
+
+def test_global_head_calibration_updates_only_the_global_classifier() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images", data_root=Path("data"), global_head_epochs=1
+    )
+    inputs = torch.randn(2, 3, 32, 32)
+    labels = torch.tensor([0, 1])
+    model.eval()
+    before_features = model.forward_features(inputs).detach().clone()
+    before_backbone = model.backbone.conv1.weight.detach().clone()
+    _fit_global_head(model, [(inputs, labels)], config, torch.device("cpu"))
+    assert torch.allclose(before_features, model.forward_features(inputs).detach())
+    assert torch.equal(before_backbone, model.backbone.conv1.weight)
+
+
+def test_backbone_batchnorm_freeze_preserves_eval_mode_for_all_bn_layers() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.train()
+    _freeze_backbone_batchnorm(model)
+    batch_norms = [
+        module for module in model.backbone.modules() if isinstance(module, torch.nn.modules.batchnorm._BatchNorm)
+    ]
+    assert batch_norms and all(not module.training for module in batch_norms)
 
 
 def test_route_compatibility_heads_fit_on_positive_and_negative_tasks() -> None:

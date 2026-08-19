@@ -17,6 +17,7 @@ from src.utils.visualization import plot_accuracy_curves, plot_mask_sparsity
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, default=Path("results/synthetic_image_benchmark"))
+    parser.add_argument("--device", default="cpu", help="cpu, cuda, or dml/directml")
     parser.add_argument("--seeds", type=int, nargs="+", default=[7, 17, 27])
     parser.add_argument("--num-tasks", type=int, default=4)
     parser.add_argument("--classes-per-task", type=int, default=3)
@@ -30,9 +31,11 @@ def main() -> None:
     parser.add_argument("--validation-fraction", type=float, default=0.2)
     parser.add_argument("--route-compatibility-epochs", type=int, default=3)
     parser.add_argument("--route-hidden-dim", type=int, default=64)
+    parser.add_argument("--route-training-weight", type=float, default=0.0)
+    parser.add_argument("--route-replay-per-task", type=int, default=16)
     parser.add_argument(
         "--route-strategy",
-        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility"),
+        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility", "fused", "global_argmax", "local_energy", "global_direct", "cosine"),
         default="compatibility",
     )
     parser.add_argument(
@@ -71,6 +74,9 @@ def main() -> None:
             route_head_epochs=3,
             route_compatibility_epochs=args.route_compatibility_epochs,
             route_hidden_dim=args.route_hidden_dim,
+            device=args.device,
+            route_training_weight=args.route_training_weight,
+            route_replay_per_task=args.route_replay_per_task,
         )
         for method in methods:
             record, history, masks = run_real_method(

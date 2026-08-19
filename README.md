@@ -80,4 +80,20 @@ The current-source comparison artifacts are stored in
 `results/bonsai_3seed_current_4tasks`, `results/pnn_3seed_current_bnfixed_4tasks`,
 `results/bonsai_8tasks_unique_mlp64`, and `results/pnn_8tasks_unique_bnfixed`.
 
+The first larger real-data comparison is in
+`results/cifar100_10task_dml_bonsai_pnn_32x3_3seed`. It uses 10 sequential
+10-class CIFAR-100 tasks, three seeds, three epochs per task, and 32 examples
+per class on the DirectML device. BONSAI reaches `21.43% +/- 0.53%`
+task-aware average accuracy with `4.23%` parameter overhead, versus PNN at
+`11.97% +/- 0.58%` with `900%` overhead. BONSAI's task-aware forgetting is
+slightly negative (`-1.27` percentage points), but its task-free route
+accuracy is only `11.34%`, close to the `10%` ten-task chance level. The
+task-free selector is therefore the main open research problem; the current
+results support a strong task-aware efficiency claim, not yet a solved
+class-incremental routing claim.
+
+The route ablations and negative controls are retained beside the main result,
+including balanced prototype/compatibility routing, fused routing, route
+replay, global-head calibration, BN freezing, and rank-8 adapter capacity.
+
 Results are written to the configured `results/` directory as CSV/JSON summaries and PNG plots. W&B logging is opt-in with `--wandb` and `WANDB_API_KEY`.

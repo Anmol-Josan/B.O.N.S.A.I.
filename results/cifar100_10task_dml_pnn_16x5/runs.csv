@@ -1,0 +1,2 @@
+average_accuracy,dataset,forgetting,method,parameter_overhead_percent,seed,task_free_accuracy_curve,task_free_average_accuracy,task_free_forgetting,task_free_route_accuracy
+0.12875,cifar100,0.0,PNN,900.0,7,"[0.175, 0.05, 0.06458333333333333, 0.0515625, 0.041249999999999995, 0.034374999999999996, 0.030357142857142857, 0.0265625, 0.025, 0.0225]",0.0225,0.02569444444444444,0.114375

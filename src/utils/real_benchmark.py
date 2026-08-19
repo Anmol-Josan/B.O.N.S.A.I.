@@ -51,8 +51,13 @@ class RealBenchmarkConfig:
     global_loss_weight: float = 0.5
     global_replay_per_task: int = 64
     global_replay_weight: float = 0.5
+    global_head_epochs: int = 0
     shared_learning_rate_scale: float = 0.1
+    classifier_learning_rate_scale: float = 1.0
+    freeze_backbone_bn: bool = False
     global_route_weight: float = 1.0
+    route_training_weight: float = 0.0
+    route_replay_per_task: int = 16
     max_samples_per_class: int | None = None
 
 
@@ -132,6 +137,33 @@ def split_task_views(
         train_tasks.append(make_view(train_position_tensor))
         validation_tasks.append(make_view(validation_position_tensor))
     return train_tasks, validation_tasks
+
+
+def balanced_sample_positions(labels: Tensor, max_samples: int) -> Tensor:
+    """Return deterministic round-robin positions covering every class."""
+
+    if labels.ndim != 1:
+        raise ValueError("labels must be one-dimensional")
+    if max_samples < 1:
+        raise ValueError("max_samples must be positive")
+    if labels.numel() == 0:
+        return torch.empty(0, dtype=torch.long)
+    class_positions = [
+        (labels == class_id).nonzero(as_tuple=False).flatten()
+        for class_id in torch.unique(labels, sorted=True).tolist()
+    ]
+    selected: list[int] = []
+    offset = 0
+    while len(selected) < min(max_samples, labels.numel()):
+        added = False
+        for positions in class_positions:
+            if offset < positions.numel() and len(selected) < max_samples:
+                selected.append(int(positions[offset]))
+                added = True
+        if not added:
+            break
+        offset += 1
+    return torch.tensor(selected, dtype=torch.long)
 
 
 def limit_task_samples(
@@ -263,6 +295,45 @@ def bonsai_training_loss(
     return loss + model.beta * model.kl_loss
 
 
+def bonsai_route_training_loss(
+    model: BonsaiResNet18,
+    inputs: Tensor,
+    task_id: int,
+    route_memory: list[tuple[Tensor, int]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> Tensor:
+    """Train the shared task gate with current examples and bounded replay."""
+
+    if config.route_training_weight < 0.0:
+        raise ValueError("route_training_weight must be nonnegative")
+    if config.route_replay_per_task < 0:
+        raise ValueError("route_replay_per_task must be nonnegative")
+    if config.route_training_weight == 0.0 or model.route_head is None:
+        return torch.zeros((), device=device)
+    route_inputs = [inputs]
+    route_targets = [
+        torch.full((inputs.shape[0],), task_id, dtype=torch.long, device=device)
+    ]
+    if config.route_replay_per_task > 0:
+        for memory_inputs, memory_task_id in route_memory:
+            replay_inputs = memory_inputs[: config.route_replay_per_task].to(device)
+            if replay_inputs.numel() == 0:
+                continue
+            route_inputs.append(replay_inputs)
+            route_targets.append(
+                torch.full(
+                    (replay_inputs.shape[0],),
+                    memory_task_id,
+                    dtype=torch.long,
+                    device=device,
+                )
+            )
+    logits = model.route_logits(torch.cat(route_inputs, dim=0))[:, : task_id + 1]
+    targets = torch.cat(route_targets, dim=0)
+    return config.route_training_weight * nn.functional.cross_entropy(logits, targets)
+
+
 def _mean_task_loss(
     model: nn.Module,
     dataset: Dataset,
@@ -295,19 +366,11 @@ def _route_calibration_batch(
 
     if config.route_calibration_samples < 1:
         raise ValueError("route_calibration_samples must be positive")
-    inputs_list: list[Tensor] = []
-    labels_list: list[Tensor] = []
-    collected = 0
-    for inputs, labels in _loader(GlobalLabelView(dataset), config, shuffle=False):
-        inputs_list.append(inputs)
-        labels_list.append(labels)
-        collected += labels.numel()
-        if collected >= config.route_calibration_samples:
-            break
-    if not inputs_list:
+    positions = balanced_sample_positions(dataset.labels, config.route_calibration_samples)
+    if positions.numel() == 0:
         raise ValueError("cannot calibrate a route from an empty task")
-    inputs = torch.cat(inputs_list, dim=0)[: config.route_calibration_samples]
-    labels = torch.cat(labels_list, dim=0)[: config.route_calibration_samples]
+    inputs = torch.stack([dataset[int(position)][0] for position in positions])
+    labels = dataset.global_labels[positions]
     return inputs.to(device), labels.to(device)
 
 
@@ -343,6 +406,40 @@ def _fit_route_head(
                 )
             )
         torch.stack(losses).mean().backward()
+        optimizer.step()
+    if was_training:
+        model.train()
+
+
+def _fit_global_head(
+    model: BonsaiResNet18,
+    global_memory: list[tuple[Tensor, Tensor]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> None:
+    """Calibrate the global class scaffold on bounded replay features."""
+
+    if not global_memory:
+        return
+    if config.global_head_epochs < 0:
+        raise ValueError("global_head_epochs must be nonnegative")
+    if config.global_head_epochs == 0:
+        return
+    was_training = model.training
+    model.eval()
+    feature_batches: list[Tensor] = []
+    label_batches: list[Tensor] = []
+    with torch.no_grad():
+        for inputs, labels in global_memory:
+            feature_batches.append(model.forward_features(inputs.to(device)).detach())
+            label_batches.append(labels.to(device))
+    features = torch.cat(feature_batches, dim=0)
+    labels = torch.cat(label_batches, dim=0)
+    optimizer = torch.optim.Adam(model.classifier.parameters(), lr=config.learning_rate)
+    for _ in range(config.global_head_epochs):
+        optimizer.zero_grad(set_to_none=True)
+        loss = nn.functional.cross_entropy(model.classifier(features), labels)
+        loss.backward()
         optimizer.step()
     if was_training:
         model.train()
@@ -461,6 +558,14 @@ def _loader(dataset: Dataset, config: RealBenchmarkConfig, shuffle: bool) -> Dat
     )
 
 
+def _freeze_backbone_batchnorm(model: BonsaiResNet18) -> None:
+    """Freeze shared BatchNorm running statistics while retaining affine grads."""
+
+    for module in model.backbone.modules():
+        if isinstance(module, nn.modules.batchnorm._BatchNorm):
+            module.eval()
+
+
 def run_real_method(
     method: str,
     tasks: list[ClassIncrementalTask],
@@ -482,8 +587,16 @@ def run_real_method(
         raise ValueError("global_replay_per_task must be nonnegative")
     if config.global_replay_weight < 0.0:
         raise ValueError("global_replay_weight must be nonnegative")
+    if config.global_head_epochs < 0:
+        raise ValueError("global_head_epochs must be nonnegative")
     if config.shared_learning_rate_scale < 0.0:
         raise ValueError("shared_learning_rate_scale must be nonnegative")
+    if config.classifier_learning_rate_scale < 0.0:
+        raise ValueError("classifier_learning_rate_scale must be nonnegative")
+    if config.route_training_weight < 0.0:
+        raise ValueError("route_training_weight must be nonnegative")
+    if config.route_replay_per_task < 0:
+        raise ValueError("route_replay_per_task must be nonnegative")
     classes_per_task = len(tasks[0].classes)
     num_classes = len(evaluation_tasks) * len(evaluation_tasks[0].classes)
     model = _make_model(
@@ -529,12 +642,15 @@ def run_real_method(
                 task_id,
                 learning_rate=config.learning_rate,
                 shared_learning_rate_scale=config.shared_learning_rate_scale,
+                classifier_learning_rate_scale=config.classifier_learning_rate_scale,
             )
         optimizer = torch.optim.Adam(optimizer_parameters, lr=config.learning_rate)
         task_start = {
             name: parameter.detach().clone() for name, parameter in model.named_parameters()
         }
         model.train()
+        if isinstance(model, BonsaiResNet18) and config.freeze_backbone_bn and task_id > 0:
+            _freeze_backbone_batchnorm(model)
         if isinstance(model, PNN):
             for previous_column in model.columns[:-1]:
                 previous_column.eval()
@@ -546,6 +662,9 @@ def run_real_method(
                 if isinstance(model, BonsaiResNet18):
                     loss = bonsai_training_loss(
                         model, inputs, labels, task_id, classes_per_task, config
+                    )
+                    loss = loss + bonsai_route_training_loss(
+                        model, inputs, task_id, route_memory, config, device
                     )
                     if global_replay and config.global_replay_weight > 0.0:
                         replay_inputs, replay_labels = global_replay[
@@ -579,6 +698,8 @@ def run_real_method(
                         model.task_parameters(task_id), lr=config.learning_rate
                     )
                 model.train()
+                if config.freeze_backbone_bn and task_id > 0:
+                    _freeze_backbone_batchnorm(model)
         if ewc is not None:
             ewc.consolidate(_loader(global_task, config, shuffle=False), max_batches=32)
         if si is not None:
@@ -605,6 +726,7 @@ def run_real_method(
                         route_labels[: config.global_replay_per_task].detach().cpu(),
                     )
                 )
+                _fit_global_head(model, global_replay, config, device)
         if bonsai_manager is not None:
             inputs, labels = next(iter(_loader(global_task, config, shuffle=False)))
             inputs, labels = inputs.to(device), labels.to(device)
