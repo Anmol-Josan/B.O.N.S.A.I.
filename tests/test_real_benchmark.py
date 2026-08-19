@@ -17,7 +17,31 @@ from src.utils.real_benchmark import (
     _fit_route_compatibility,
     limit_task_samples,
     split_task_views,
+    resolve_device,
 )
+
+
+def test_real_benchmark_method_selection_rejects_empty_or_unknown_methods() -> None:
+    from src.utils.real_benchmark import run_real_suite
+
+    base = dict(dataset="synthetic_images", data_root=Path("data"))
+    try:
+        run_real_suite(RealBenchmarkConfig(methods=(), **base))
+    except ValueError as error:
+        assert "at least one" in str(error)
+    else:
+        raise AssertionError("empty method selection should fail")
+
+    try:
+        run_real_suite(RealBenchmarkConfig(methods=("unknown",), **base))
+    except ValueError as error:
+        assert "unknown benchmark methods" in str(error)
+    else:
+        raise AssertionError("unknown method selection should fail")
+
+
+def test_resolve_device_keeps_cpu_path_available() -> None:
+    assert resolve_device("cpu") == torch.device("cpu")
 
 
 def test_real_runner_view_exposes_global_labels_without_changing_task_indices() -> None:

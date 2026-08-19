@@ -20,6 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-cov>=4.0"]
+directml = ["torch-directml>=0.2.5.dev240914"]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -32,4 +33,3 @@ addopts = "-ra"
 
 [tool.ruff]
 line-length = 100
-

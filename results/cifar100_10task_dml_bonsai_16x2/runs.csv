@@ -1,0 +1,2 @@
+average_accuracy,dataset,forgetting,method,parameter_overhead_percent,seed,task_free_accuracy_curve,task_free_average_accuracy,task_free_forgetting,task_free_route_accuracy
+0.135625,cifar100,-0.018750000000000003,BONSAI,4.235577833239527,7,"[0.10625, 0.037500000000000006, 0.0375, 0.05, 0.04, 0.036458333333333336, 0.03214285714285715, 0.028124999999999997, 0.020833333333333332, 0.01625]",0.01625,0.06458333333333334,0.119375

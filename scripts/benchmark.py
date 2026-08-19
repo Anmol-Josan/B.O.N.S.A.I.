@@ -15,8 +15,15 @@ from src.utils.real_benchmark import RealBenchmarkConfig, run_real_suite
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", choices=("synthetic", "cifar100", "tinyimagenet"), default="synthetic")
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        choices=("BONSAI", "EWC", "SI", "PackNet", "PNN"),
+        default=("BONSAI", "EWC", "SI", "PackNet", "PNN"),
+    )
     parser.add_argument("--data-root", type=Path, default=Path("data"))
     parser.add_argument("--output-dir", type=Path, default=Path("results/toy_benchmark"))
+    parser.add_argument("--device", default="cpu", help="cpu, cuda, or dml/directml")
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--learning-rate", type=float, default=0.001)
@@ -88,7 +95,9 @@ def main() -> None:
             RealBenchmarkConfig(
                 dataset=args.dataset,
                 data_root=args.data_root,
+                methods=tuple(args.methods),
                 seeds=tuple(args.seeds),
+                device=args.device,
                 epochs_per_task=args.epochs,
                 batch_size=args.batch_size,
                 learning_rate=args.learning_rate,

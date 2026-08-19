@@ -24,6 +24,18 @@ python scripts/benchmark.py --dataset cifar100 --data-root data/cifar100 --downl
 python scripts/benchmark.py --dataset tinyimagenet --data-root data/tiny-imagenet-200
 ```
 
+On Windows with an Intel Iris Xe or another DirectX 12 GPU, install the optional
+DirectML backend and select it explicitly:
+
+```powershell
+python -m pip install -e ".[directml]"
+python scripts/benchmark.py --dataset cifar100 --data-root data/cifar100 --device dml --methods BONSAI PNN
+```
+
+DirectML may fall back to CPU for unsupported operators (the current Adam update
+does this), so benchmark wall-clock time rather than assuming every workload is
+GPU-faster. The runner accepts `cpu`, `cuda`, and `dml`/`directml` device names.
+
 For a larger shared-representation stress test:
 
 ```powershell

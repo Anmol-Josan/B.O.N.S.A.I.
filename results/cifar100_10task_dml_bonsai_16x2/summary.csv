@@ -1,0 +1,2 @@
+average_accuracy_mean,average_accuracy_std,dataset,forgetting_mean,forgetting_std,method,parameter_overhead_percent_mean,parameter_overhead_percent_std,task_free_average_accuracy_mean,task_free_average_accuracy_std,task_free_forgetting_mean,task_free_forgetting_std,task_free_route_accuracy_mean,task_free_route_accuracy_std
+0.135625,0.0,cifar100,-0.018750000000000003,0.0,BONSAI,4.235577833239527,0.0,0.01625,0.0,0.06458333333333334,0.0,0.119375,0.0

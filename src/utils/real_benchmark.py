@@ -26,6 +26,7 @@ from src.utils.visualization import plot_accuracy_curves, plot_mask_sparsity
 class RealBenchmarkConfig:
     dataset: str
     data_root: Path
+    methods: tuple[str, ...] = ("BONSAI", "EWC", "SI", "PackNet", "PNN")
     output_dir: Path = Path("results/real_benchmark")
     seeds: tuple[int, ...] = (7, 17, 27, 37, 47)
     epochs_per_task: int = 5
@@ -67,6 +68,21 @@ class GlobalLabelView(Dataset[tuple[Any, Tensor]]):
     def __getitem__(self, index: int) -> tuple[Any, Tensor]:
         inputs, _ = self.task[index]
         return inputs, self.task.global_labels[index]
+
+
+def resolve_device(device_name: str) -> torch.device:
+    """Resolve standard PyTorch devices plus the optional Windows DirectML backend."""
+
+    normalized = device_name.strip().lower()
+    if normalized in {"dml", "directml", "privateuseone", "privateuseone:0"}:
+        try:
+            import torch_directml
+        except ImportError as error:  # pragma: no cover - optional runtime
+            raise ImportError(
+                "DirectML support requires the optional 'torch-directml' package"
+            ) from error
+        return torch_directml.device()
+    return torch.device(device_name)
 
 
 def split_task_views(
@@ -364,6 +380,7 @@ def _fit_route_compatibility(
                 targets = torch.full(
                     (features.shape[0],),
                     float(memory_id == task_id),
+                    dtype=torch.float32,
                     device=device,
                 )
                 losses.append(
@@ -455,7 +472,7 @@ def run_real_method(
     """Train one method sequentially and return metrics, history, and masks."""
 
     seed_everything(seed)
-    device = torch.device(config.device)
+    device = resolve_device(config.device)
     evaluation_tasks = tasks if evaluation_tasks is None else evaluation_tasks
     if validation_tasks is not None and len(validation_tasks) != len(tasks):
         raise ValueError("validation_tasks must have the same number of tasks as tasks")
@@ -499,7 +516,9 @@ def run_real_method(
             model.add_task_path()
             model.start_task()
         if isinstance(model, PNN) and task_id > 0:
-            model.add_task_column()
+            # PNN allocates columns lazily; move each new column to the selected
+            # backend because ``model.to(device)`` ran before the column existed.
+            model.add_task_column().to(device)
         global_task = GlobalLabelView(task)
         training_loader = _loader(global_task, config, shuffle=True)
         optimizer_parameters = (
@@ -695,7 +714,14 @@ def run_real_method(
 
 
 def run_real_suite(config: RealBenchmarkConfig) -> tuple[list[dict], list[dict]]:
-    """Run all five methods across all configured seeds on a real dataset."""
+    """Run the selected methods across all configured seeds on a real dataset."""
+
+    available_methods = ("BONSAI", "EWC", "SI", "PackNet", "PNN")
+    if not config.methods:
+        raise ValueError("methods must contain at least one benchmark method")
+    unknown_methods = tuple(method for method in config.methods if method not in available_methods)
+    if unknown_methods:
+        raise ValueError(f"unknown benchmark methods: {unknown_methods}")
 
     raw_training_tasks = load_real_tasks(config, train=True)
     tasks, validation_tasks = split_task_views(
@@ -704,7 +730,7 @@ def run_real_suite(config: RealBenchmarkConfig) -> tuple[list[dict], list[dict]]
         seed=config.validation_seed,
     )
     evaluation_tasks = load_real_tasks(config, train=False)
-    methods = ("BONSAI", "EWC", "SI", "PackNet", "PNN")
+    methods = config.methods
     records: list[dict] = []
     histories: dict[str, list[list[list[float]]]] = {method: [] for method in methods}
     first_masks: dict[int, dict[str, Tensor]] = {}

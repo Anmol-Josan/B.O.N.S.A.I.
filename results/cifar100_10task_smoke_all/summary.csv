@@ -1,0 +1,6 @@
+average_accuracy_mean,average_accuracy_std,dataset,forgetting_mean,forgetting_std,method,parameter_overhead_percent_mean,parameter_overhead_percent_std,task_free_average_accuracy_mean,task_free_average_accuracy_std,task_free_forgetting_mean,task_free_forgetting_std,task_free_route_accuracy_mean,task_free_route_accuracy_std
+0.10999999999999999,0.0,cifar100,-0.016666666666666666,0.0,BONSAI,2.8367306914785138,0.0,0.0125,0.0,0.07500000000000001,0.0,0.1,0.0
+0.01,0.0,cifar100,0.04444444444444444,0.0,EWC,0.0,0.0,0.01,0.0,0.04444444444444444,0.0,,
+0.10499999999999998,0.0,cifar100,0.0,0.0,PNN,900.0,0.0,0.0075,0.0,0.027777777777777776,0.0,0.115,0.0
+0.0075000000000000015,0.0,cifar100,0.016666666666666666,0.0,PackNet,0.0,0.0,0.0075000000000000015,0.0,0.016666666666666666,0.0,,
+0.01,0.0,cifar100,0.019444444444444445,0.0,SI,0.0,0.0,0.01,0.0,0.019444444444444445,0.0,,
