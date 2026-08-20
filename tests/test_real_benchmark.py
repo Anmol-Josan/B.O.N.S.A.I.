@@ -15,7 +15,12 @@ from src.utils.real_benchmark import (
     _task_target,
     bonsai_training_loss,
     _fit_route_compatibility,
+    _fit_route_discovery,
+    _fit_route_evidence,
+    _refresh_route_state,
     bonsai_route_training_loss,
+    bonsai_feature_replay_loss,
+    bonsai_local_replay_loss,
     _fit_global_head,
     _freeze_backbone_batchnorm,
     limit_task_samples,
@@ -173,6 +178,133 @@ def test_route_compatibility_heads_fit_on_positive_and_negative_tasks() -> None:
 
     assert predictions.shape == (2,)
     assert selected_tasks.max() < 2
+
+
+def test_route_state_refresh_recomputes_features_after_shared_rewire() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    inputs0 = torch.randn(2, 3, 32, 32)
+    inputs1 = torch.randn(2, 3, 32, 32)
+    labels0 = torch.tensor([0, 1])
+    labels1 = torch.tensor([2, 3])
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        route_head_epochs=1,
+        route_compatibility_epochs=1,
+    )
+    model.eval()
+    model.register_task_route(0, inputs0, labels0, classes_per_task=2)
+    before = model._route_prototypes[0].clone()
+    with torch.no_grad():
+        model.backbone.conv1.weight.add_(0.01)
+    calibration_memory = [
+        (inputs0, labels0, 0),
+        (inputs1, labels1, 1),
+    ]
+    route_memory = [(inputs0, 0), (inputs1, 1)]
+    _refresh_route_state(
+        model,
+        calibration_memory,
+        route_memory,
+        config,
+        torch.device("cpu"),
+        classes_per_task=2,
+    )
+    assert len(model._route_prototypes) == 2
+    assert not torch.allclose(before, model._route_prototypes[0])
+
+
+def test_input_only_route_discovery_calibration_updates_only_its_branch() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    memory = [
+        (torch.randn(4, 3, 32, 32), torch.tensor([0, 0, 1, 1]), 0),
+        (torch.randn(4, 3, 32, 32), torch.tensor([2, 2, 3, 3]), 1),
+    ]
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        learning_rate=0.01,
+        route_discovery_epochs=1,
+    )
+    before = model.backbone.conv1.weight.detach().clone()
+    discovery_before = next(model.route_discovery_encoder.parameters()).detach().clone()
+    _fit_route_discovery(model, memory, config, torch.device("cpu"))
+    discovery_after = next(model.route_discovery_encoder.parameters()).detach()
+    assert torch.equal(before, model.backbone.conv1.weight)
+    assert not torch.equal(discovery_before, discovery_after)
+
+
+def test_route_evidence_calibration_updates_only_path_calibrators() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    route_memory = [
+        (torch.randn(3, 3, 32, 32), 0),
+        (torch.randn(3, 3, 32, 32), 1),
+    ]
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        learning_rate=0.01,
+        route_evidence_epochs=1,
+    )
+    before = next(model.route_evidence_heads[0].parameters()).detach().clone()
+    backbone_before = model.backbone.conv1.weight.detach().clone()
+    _fit_route_evidence(model, route_memory, config, torch.device("cpu"))
+    after = next(model.route_evidence_heads[0].parameters()).detach()
+    assert not torch.equal(before, after)
+    assert torch.equal(backbone_before, model.backbone.conv1.weight)
+
+
+def test_feature_replay_loss_backpropagates_through_the_old_task_path() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    inputs = torch.randn(3, 3, 32, 32)
+    model.eval()
+    with torch.no_grad():
+        target_features = model.forward_features(inputs, task_id=0).cpu()
+    model.train()
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        feature_replay_weight=1.0,
+        feature_replay_per_task=2,
+    )
+    loss = bonsai_feature_replay_loss(
+        model,
+        [(inputs, 0, target_features)],
+        config,
+        torch.device("cpu"),
+    )
+    loss.backward()
+    assert torch.isfinite(loss)
+    assert model.backbone.conv1.weight.grad is not None
+
+
+def test_local_replay_loss_backpropagates_through_previous_task_heads() -> None:
+    model = BonsaiResNet18(num_classes=4, classes_per_task=2, task_adapter_rank=1)
+    model.add_task_path()
+    model.add_task_path()
+    inputs = torch.randn(3, 3, 32, 32)
+    labels = torch.tensor([0, 1, 0])
+    config = RealBenchmarkConfig(
+        dataset="synthetic_images",
+        data_root=Path("data"),
+        local_replay_weight=1.0,
+        local_replay_per_task=2,
+    )
+    loss = bonsai_local_replay_loss(
+        model,
+        [(inputs, labels, 0)],
+        classes_per_task=2,
+        config=config,
+        device=torch.device("cpu"),
+    )
+    loss.backward()
+    assert torch.isfinite(loss)
+    assert model.backbone.conv1.weight.grad is not None
 
 
 def test_pnn_baseline_uses_local_task_class_slice() -> None:

@@ -1,0 +1,18 @@
+[
+  {
+    "average_accuracy_mean": 0.14,
+    "average_accuracy_std": 0.0,
+    "dataset": "cifar100",
+    "forgetting_mean": -0.01736111111111112,
+    "forgetting_std": 0.0,
+    "method": "BONSAI",
+    "parameter_overhead_percent_mean": 4.289838026289648,
+    "parameter_overhead_percent_std": 0.0,
+    "task_free_average_accuracy_mean": 0.023125,
+    "task_free_average_accuracy_std": 0.0,
+    "task_free_forgetting_mean": 0.044444444444444446,
+    "task_free_forgetting_std": 0.0,
+    "task_free_route_accuracy_mean": 0.135,
+    "task_free_route_accuracy_std": 0.0
+  }
+]

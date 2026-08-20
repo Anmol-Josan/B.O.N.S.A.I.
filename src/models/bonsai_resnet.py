@@ -26,6 +26,8 @@ class BonsaiResNet18(nn.Module):
         task_adapter_rank: int = 8,
         classes_per_task: int | None = None,
         route_hidden_dim: int = 0,
+        route_discovery_hidden_dim: int = 32,
+        adapter_residual_init_std: float = 0.0,
     ) -> None:
         super().__init__()
         self.backbone = build_resnet18(num_classes=num_classes)
@@ -38,9 +40,15 @@ class BonsaiResNet18(nn.Module):
             raise ValueError("classes_per_task must be positive when provided")
         if route_hidden_dim < 0:
             raise ValueError("route_hidden_dim must be nonnegative")
+        if route_discovery_hidden_dim < 1:
+            raise ValueError("route_discovery_hidden_dim must be positive")
+        if adapter_residual_init_std < 0.0:
+            raise ValueError("adapter_residual_init_std must be nonnegative")
         self.task_adapter_rank = task_adapter_rank
         self.classes_per_task = classes_per_task
         self.route_hidden_dim = route_hidden_dim
+        self.route_discovery_hidden_dim = route_discovery_hidden_dim
+        self.adapter_residual_init_std = adapter_residual_init_std
         self.junction_growth_ratio = junction_growth_ratio
         self.plateau_patience = plateau_patience
         self.plateau_min_improvement = plateau_min_improvement
@@ -52,6 +60,7 @@ class BonsaiResNet18(nn.Module):
         self.task_stage_adapters = nn.ModuleList()
         self.task_heads = nn.ModuleList()
         self.route_compatibility_heads = nn.ModuleList()
+        self.route_evidence_heads = nn.ModuleList()
         self.num_tasks = (
             num_classes // classes_per_task
             if classes_per_task is not None and num_classes % classes_per_task == 0
@@ -59,6 +68,8 @@ class BonsaiResNet18(nn.Module):
         )
         if self.num_tasks <= 0:
             self.route_head = None
+            self.route_discovery_encoder = None
+            self.route_discovery_head = None
         elif route_hidden_dim > 0:
             # A nonlinear gate is still tiny relative to ResNet-18, but can
             # separate task manifolds that are not linearly separable in the
@@ -71,6 +82,30 @@ class BonsaiResNet18(nn.Module):
             )
         else:
             self.route_head = nn.Linear(self.feature_dim, self.num_tasks)
+        if self.num_tasks > 0:
+            # This input-only branch learns task fingerprints without using
+            # the shared representation, so orthogonal rewiring cannot stale
+            # its features or perturb the local classifiers.
+            self.route_discovery_encoder = nn.Sequential(
+                nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1, bias=False),
+                nn.GroupNorm(8, 32),
+                nn.GELU(),
+                nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias=False),
+                nn.GroupNorm(8, 64),
+                nn.GELU(),
+                nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1, bias=False),
+                nn.GroupNorm(8, 64),
+                nn.GELU(),
+                nn.AdaptiveAvgPool2d(1),
+                nn.Flatten(),
+                nn.Linear(64, route_discovery_hidden_dim),
+                nn.GELU(),
+            )
+            # Predict global classes; task logits are obtained by summing the
+            # class evidence inside each non-overlapping task range.
+            self.route_discovery_head = nn.Linear(
+                route_discovery_hidden_dim, num_classes
+            )
         self.classifier = nn.Linear(self.feature_dim, num_classes)
         self._route_prototypes: list[Tensor] = []
         self._route_valid: list[Tensor] = []
@@ -115,13 +150,21 @@ class BonsaiResNet18(nn.Module):
             adapter = None
         else:
             device = next(self.parameters()).device
-            adapter = BottleneckAdapter(self.feature_dim, self.task_adapter_rank).to(device)
+            adapter = BottleneckAdapter(
+                self.feature_dim,
+                self.task_adapter_rank,
+                up_init_std=self.adapter_residual_init_std,
+            ).to(device)
             self.task_adapters.append(adapter)
             stage_channels = (64, 128, 256, 512)
             self.task_stage_adapters.append(
                 nn.ModuleList(
                     [
-                        ConvBottleneckAdapter(channels, self.task_adapter_rank).to(device)
+                        ConvBottleneckAdapter(
+                            channels,
+                            self.task_adapter_rank,
+                            up_init_std=self.adapter_residual_init_std,
+                        ).to(device)
                         for channels in stage_channels
                     ]
                 )
@@ -131,6 +174,16 @@ class BonsaiResNet18(nn.Module):
             self.task_heads.append(
                 nn.Linear(self.feature_dim, self.classes_per_task).to(device)
             )
+            evidence_input_dim = self.classes_per_task + 4
+            if self.route_hidden_dim == 0:
+                evidence_head: nn.Module = nn.Linear(evidence_input_dim, 1)
+            else:
+                evidence_head = nn.Sequential(
+                    nn.Linear(evidence_input_dim, self.route_hidden_dim),
+                    nn.GELU(),
+                    nn.Linear(self.route_hidden_dim, 1),
+                )
+            self.route_evidence_heads.append(evidence_head.to(device))
         device = next(self.parameters()).device
         if self.route_hidden_dim == 0:
             compatibility_head: nn.Module = nn.Linear(self.feature_dim, 1)
@@ -157,6 +210,10 @@ class BonsaiResNet18(nn.Module):
         current_adapter.update(
             id(parameter) for parameter in self.route_compatibility_heads[task_id].parameters()
         )
+        if self.classes_per_task is not None:
+            current_adapter.update(
+                id(parameter) for parameter in self.route_evidence_heads[task_id].parameters()
+            )
         adapter_parameter_ids = {
             id(parameter)
             for adapter in self.task_adapters
@@ -177,10 +234,32 @@ class BonsaiResNet18(nn.Module):
             for head in self.route_compatibility_heads
             for parameter in head.parameters()
         )
+        adapter_parameter_ids.update(
+            id(parameter)
+            for head in self.route_evidence_heads
+            for parameter in head.parameters()
+        )
+        route_discovery_parameter_ids = {
+            id(parameter) for parameter in self.route_discovery_parameters()
+        }
         return [
             parameter
             for parameter in self.parameters()
-            if id(parameter) in current_adapter or id(parameter) not in adapter_parameter_ids
+            if id(parameter) in current_adapter
+            or (
+                id(parameter) not in adapter_parameter_ids
+                and id(parameter) not in route_discovery_parameter_ids
+            )
+        ]
+
+    def route_discovery_parameters(self) -> list[nn.Parameter]:
+        """Return only the isolated input-to-task discovery branch."""
+
+        if self.route_discovery_encoder is None or self.route_discovery_head is None:
+            return []
+        return [
+            *self.route_discovery_encoder.parameters(),
+            *self.route_discovery_head.parameters(),
         ]
 
     def task_parameter_groups(
@@ -209,14 +288,23 @@ class BonsaiResNet18(nn.Module):
         current_ids.update(
             id(parameter) for parameter in self.route_compatibility_heads[task_id].parameters()
         )
+        if self.classes_per_task is not None:
+            current_ids.update(
+                id(parameter) for parameter in self.route_evidence_heads[task_id].parameters()
+            )
         classifier_ids = {id(parameter) for parameter in self.classifier.parameters()}
+        route_discovery_ids = {
+            id(parameter) for parameter in self.route_discovery_parameters()
+        }
         task_parameters = self.task_parameters(task_id)
         current = [parameter for parameter in task_parameters if id(parameter) in current_ids]
         classifier = [parameter for parameter in task_parameters if id(parameter) in classifier_ids]
         shared = [
             parameter
             for parameter in task_parameters
-            if id(parameter) not in current_ids and id(parameter) not in classifier_ids
+            if id(parameter) not in current_ids
+            and id(parameter) not in classifier_ids
+            and id(parameter) not in route_discovery_ids
         ]
         groups: list[dict[str, object]] = []
         if shared and shared_learning_rate_scale > 0.0:
@@ -254,6 +342,49 @@ class BonsaiResNet18(nn.Module):
         if self.route_head is None:
             raise RuntimeError("route head requires classes_per_task at construction")
         return self.route_head(features)
+
+    def route_discovery_logits(self, inputs: Tensor) -> Tensor:
+        """Return task evidence derived from global class predictions."""
+
+        if self.route_discovery_encoder is None or self.route_discovery_head is None:
+            raise RuntimeError("task discovery requires classes_per_task at construction")
+        if self.classes_per_task is None:
+            raise RuntimeError("task discovery requires classes_per_task at construction")
+        class_logits = self.route_discovery_class_logits(inputs)
+        return torch.stack(
+            [
+                torch.logsumexp(
+                    class_logits[
+                        :, task_id * self.classes_per_task : (task_id + 1) * self.classes_per_task
+                    ],
+                    dim=-1,
+                )
+                for task_id in range(self.num_tasks)
+            ],
+            dim=1,
+        )
+
+    def route_discovery_class_logits(self, inputs: Tensor) -> Tensor:
+        """Return global-class logits from the isolated discovery branch."""
+
+        if self.route_discovery_encoder is None or self.route_discovery_head is None:
+            raise RuntimeError("task discovery requires classes_per_task at construction")
+        return self.route_discovery_head(self.route_discovery_encoder(inputs))
+
+    @staticmethod
+    def route_evidence_features(local_logits: Tensor) -> Tensor:
+        """Build calibrated evidence from one task head's local logits."""
+
+        probabilities = local_logits.softmax(dim=-1)
+        entropy = -(probabilities * probabilities.clamp_min(1e-8).log()).sum(dim=-1)
+        top_values = local_logits.topk(k=min(2, local_logits.shape[-1]), dim=-1).values
+        maximum = top_values[:, 0]
+        margin = maximum if top_values.shape[-1] == 1 else top_values[:, 0] - top_values[:, 1]
+        log_partition = torch.logsumexp(local_logits, dim=-1)
+        return torch.cat(
+            [local_logits, log_partition.unsqueeze(-1), maximum.unsqueeze(-1), margin.unsqueeze(-1), entropy.unsqueeze(-1)],
+            dim=-1,
+        )
 
     @property
     def route_head_output_features(self) -> int:
@@ -376,9 +507,11 @@ class BonsaiResNet18(nn.Module):
             "local_energy",
             "global_direct",
             "cosine",
+            "discovery",
+            "evidence",
         }:
             raise ValueError(
-                "route_strategy must be entropy, prototype, hybrid, learned, scaffold, compatibility, fused, global_argmax, local_energy, global_direct, or cosine"
+                "route_strategy must be entropy, prototype, hybrid, learned, scaffold, compatibility, fused, global_argmax, local_energy, global_direct, cosine, discovery, or evidence"
             )
         if classes_per_task < 1:
             raise ValueError("classes_per_task must be positive")
@@ -435,6 +568,9 @@ class BonsaiResNet18(nn.Module):
         global_logits = None
         global_log_prob = None
         global_task_log_mass = None
+        discovery_logits = (
+            self.route_discovery_logits(inputs) if route_strategy == "discovery" else None
+        )
         if shared_features is not None and self.classifier.out_features >= len(self.task_adapters) * classes_per_task:
             global_logits = self.classifier(shared_features)
             global_log_prob = global_logits.log_softmax(dim=-1)
@@ -547,6 +683,24 @@ class BonsaiResNet18(nn.Module):
                     (normalized_features @ normalized_weight.t()).max(dim=-1).values
                 )
             scores = -torch.stack(cosine_scores, dim=1)
+        elif route_strategy == "discovery":
+            if discovery_logits is None:
+                scores = entropies
+            else:
+                scores = -discovery_logits[:, : len(self.task_adapters)]
+        elif route_strategy == "evidence":
+            if len(self.route_evidence_heads) != len(self.task_adapters):
+                scores = entropies
+            else:
+                evidence_scores = []
+                for task_id in range(len(self.task_adapters)):
+                    evidence_features = self.route_evidence_features(
+                        local_logits[:, task_id]
+                    )
+                    evidence_scores.append(
+                        self.route_evidence_heads[task_id](evidence_features).squeeze(-1)
+                    )
+                scores = -torch.stack(evidence_scores, dim=1)
         elif route_strategy in {"learned", "scaffold"}:
             if route_strategy == "learned" and self.route_head is None:
                 scores = entropies

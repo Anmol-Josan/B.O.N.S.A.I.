@@ -1,0 +1,20 @@
+[
+  {
+    "average_accuracy_mean": 1.0,
+    "average_accuracy_std": 0.0,
+    "dataset": "synthetic_images",
+    "forgetting_mean": -0.037037037037037056,
+    "forgetting_std": 0.0,
+    "method": "BONSAI",
+    "noise_mean": 0.1,
+    "noise_std": 0.0,
+    "parameter_overhead_percent_mean": 1.5860640330683962,
+    "parameter_overhead_percent_std": 0.0,
+    "task_free_average_accuracy_mean": 0.9027777777777778,
+    "task_free_average_accuracy_std": 0.0,
+    "task_free_forgetting_mean": -0.29629629629629634,
+    "task_free_forgetting_std": 0.0,
+    "task_free_route_accuracy_mean": 0.9027777777777778,
+    "task_free_route_accuracy_std": 0.0
+  }
+]

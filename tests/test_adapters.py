@@ -19,3 +19,15 @@ def test_convolutional_adapter_starts_as_identity() -> None:
 
     assert torch.allclose(adapter(features), features)
     assert adapter.parameter_count == 8 * 2 * 2
+
+
+def test_nonzero_residual_initialization_activates_both_low_rank_factors() -> None:
+    torch.manual_seed(4)
+    adapter = BottleneckAdapter(hidden_dim=12, bottleneck_dim=3, up_init_std=0.02)
+    features = torch.randn(5, 12)
+    loss = adapter(features).square().mean()
+    loss.backward()
+
+    assert not torch.allclose(adapter(features.detach()), features.detach())
+    assert adapter.down.weight.grad is not None
+    assert adapter.down.weight.grad.abs().sum() > 0

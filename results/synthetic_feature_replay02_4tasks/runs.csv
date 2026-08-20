@@ -1,0 +1,2 @@
+average_accuracy,dataset,forgetting,method,noise,parameter_overhead_percent,seed,task_free_accuracy_curve,task_free_average_accuracy,task_free_forgetting,task_free_route_accuracy
+0.9861111111111112,synthetic_images,-0.1574074074074074,BONSAI,0.1,1.5860640330683962,7,"[0.5277777777777778, 0.9861111111111112, 0.8796296296296297, 0.9583333333333333]",0.9583333333333333,-0.25925925925925924,0.9722222222222222

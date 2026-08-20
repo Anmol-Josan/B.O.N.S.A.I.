@@ -43,10 +43,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--real-route-strategy",
-        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility", "fused", "global_argmax", "local_energy", "global_direct", "cosine"),
+        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility", "fused", "global_argmax", "local_energy", "global_direct", "cosine", "discovery", "evidence"),
         default="compatibility",
     )
     parser.add_argument("--task-adapter-rank", type=int, default=8)
+    parser.add_argument("--adapter-residual-init-std", type=float, default=0.0)
     parser.add_argument("--replay-per-task", type=int, default=16)
     parser.add_argument("--replay-weight", type=float, default=0.5)
     parser.add_argument("--validation-fraction", type=float, default=0.1)
@@ -57,6 +58,9 @@ def main() -> None:
     parser.add_argument("--route-head-epochs", type=int, default=3)
     parser.add_argument("--route-compatibility-epochs", type=int, default=3)
     parser.add_argument("--route-hidden-dim", type=int, default=64)
+    parser.add_argument("--route-discovery-hidden-dim", type=int, default=32)
+    parser.add_argument("--route-discovery-epochs", type=int, default=10)
+    parser.add_argument("--route-evidence-epochs", type=int, default=3)
     parser.add_argument("--global-loss-weight", type=float, default=0.5)
     parser.add_argument("--global-replay-per-task", type=int, default=64)
     parser.add_argument("--global-replay-weight", type=float, default=0.5)
@@ -67,6 +71,10 @@ def main() -> None:
     parser.add_argument("--global-route-weight", type=float, default=1.0)
     parser.add_argument("--route-training-weight", type=float, default=0.0)
     parser.add_argument("--route-replay-per-task", type=int, default=16)
+    parser.add_argument("--feature-replay-weight", type=float, default=0.0)
+    parser.add_argument("--feature-replay-per-task", type=int, default=16)
+    parser.add_argument("--local-replay-weight", type=float, default=0.0)
+    parser.add_argument("--local-replay-per-task", type=int, default=16)
     parser.add_argument("--max-samples-per-class", type=int, default=None)
     parser.add_argument("--seeds", type=int, nargs="+", default=[7, 17, 27, 37, 47])
     parser.add_argument("--wandb", action="store_true")
@@ -108,6 +116,7 @@ def main() -> None:
                 learning_rate=args.learning_rate,
                 output_dir=args.output_dir,
                 task_adapter_rank=args.task_adapter_rank,
+                adapter_residual_init_std=args.adapter_residual_init_std,
                 rewire_strength=args.rewire_strength,
                 max_frozen_fraction=args.max_frozen_fraction,
                 validation_fraction=args.validation_fraction,
@@ -119,6 +128,9 @@ def main() -> None:
                 route_head_epochs=args.route_head_epochs,
                 route_compatibility_epochs=args.route_compatibility_epochs,
                 route_hidden_dim=args.route_hidden_dim,
+                route_discovery_hidden_dim=args.route_discovery_hidden_dim,
+                route_discovery_epochs=args.route_discovery_epochs,
+                route_evidence_epochs=args.route_evidence_epochs,
                 global_loss_weight=args.global_loss_weight,
                 global_replay_per_task=args.global_replay_per_task,
                 global_replay_weight=args.global_replay_weight,
@@ -129,6 +141,10 @@ def main() -> None:
                 global_route_weight=args.global_route_weight,
                 route_training_weight=args.route_training_weight,
                 route_replay_per_task=args.route_replay_per_task,
+                feature_replay_weight=args.feature_replay_weight,
+                feature_replay_per_task=args.feature_replay_per_task,
+                local_replay_weight=args.local_replay_weight,
+                local_replay_per_task=args.local_replay_per_task,
                 max_samples_per_class=args.max_samples_per_class,
                 download=args.download,
             )

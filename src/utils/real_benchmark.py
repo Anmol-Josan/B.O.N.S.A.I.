@@ -36,6 +36,7 @@ class RealBenchmarkConfig:
     download: bool = False
     device: str = "cpu"
     task_adapter_rank: int = 8
+    adapter_residual_init_std: float = 0.0
     rewire_strength: float = 0.15
     max_frozen_fraction: float | None = 0.65
     validation_fraction: float = 0.1
@@ -48,6 +49,9 @@ class RealBenchmarkConfig:
     route_head_epochs: int = 3
     route_compatibility_epochs: int = 3
     route_hidden_dim: int = 64
+    route_discovery_hidden_dim: int = 32
+    route_discovery_epochs: int = 10
+    route_evidence_epochs: int = 3
     global_loss_weight: float = 0.5
     global_replay_per_task: int = 64
     global_replay_weight: float = 0.5
@@ -58,6 +62,10 @@ class RealBenchmarkConfig:
     global_route_weight: float = 1.0
     route_training_weight: float = 0.0
     route_replay_per_task: int = 16
+    feature_replay_weight: float = 0.0
+    feature_replay_per_task: int = 16
+    local_replay_weight: float = 0.0
+    local_replay_per_task: int = 16
     max_samples_per_class: int | None = None
 
 
@@ -227,6 +235,8 @@ def _make_model(
     task_adapter_rank: int = 8,
     classes_per_task: int | None = None,
     route_hidden_dim: int = 64,
+    route_discovery_hidden_dim: int = 32,
+    adapter_residual_init_std: float = 0.0,
 ) -> nn.Module:
     models = {
         "BONSAI": lambda: BonsaiResNet18(
@@ -234,6 +244,8 @@ def _make_model(
             task_adapter_rank=task_adapter_rank,
             classes_per_task=classes_per_task,
             route_hidden_dim=route_hidden_dim,
+            route_discovery_hidden_dim=route_discovery_hidden_dim,
+            adapter_residual_init_std=adapter_residual_init_std,
         ),
         "EWC": lambda: EWC(num_classes=num_classes),
         "SI": lambda: SI(num_classes=num_classes),
@@ -309,6 +321,14 @@ def bonsai_route_training_loss(
         raise ValueError("route_training_weight must be nonnegative")
     if config.route_replay_per_task < 0:
         raise ValueError("route_replay_per_task must be nonnegative")
+    if config.feature_replay_weight < 0.0:
+        raise ValueError("feature_replay_weight must be nonnegative")
+    if config.feature_replay_per_task < 0:
+        raise ValueError("feature_replay_per_task must be nonnegative")
+    if config.local_replay_weight < 0.0:
+        raise ValueError("local_replay_weight must be nonnegative")
+    if config.local_replay_per_task < 0:
+        raise ValueError("local_replay_per_task must be nonnegative")
     if config.route_training_weight == 0.0 or model.route_head is None:
         return torch.zeros((), device=device)
     route_inputs = [inputs]
@@ -332,6 +352,65 @@ def bonsai_route_training_loss(
     logits = model.route_logits(torch.cat(route_inputs, dim=0))[:, : task_id + 1]
     targets = torch.cat(route_targets, dim=0)
     return config.route_training_weight * nn.functional.cross_entropy(logits, targets)
+
+
+def bonsai_feature_replay_loss(
+    model: BonsaiResNet18,
+    feature_memory: list[tuple[Tensor, int, Tensor]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> Tensor:
+    """Preserve old task-path geometry with bounded normalized feature replay."""
+
+    if config.feature_replay_weight < 0.0:
+        raise ValueError("feature_replay_weight must be nonnegative")
+    if config.feature_replay_per_task < 0:
+        raise ValueError("feature_replay_per_task must be nonnegative")
+    if config.feature_replay_weight == 0.0 or not feature_memory:
+        return torch.zeros((), device=device)
+    losses: list[Tensor] = []
+    for inputs, task_id, target_features in feature_memory:
+        replay_inputs = inputs[: config.feature_replay_per_task].to(device)
+        replay_targets = target_features[: config.feature_replay_per_task].to(device)
+        if replay_inputs.numel() == 0:
+            continue
+        current_features = model.forward_features(replay_inputs, task_id=task_id)
+        current_features = nn.functional.normalize(current_features, dim=-1)
+        replay_targets = nn.functional.normalize(replay_targets, dim=-1)
+        cosine = (current_features * replay_targets).sum(dim=-1).mean()
+        losses.append(torch.ones((), device=device, dtype=cosine.dtype) - cosine)
+    if not losses:
+        return torch.zeros((), device=device)
+    return config.feature_replay_weight * torch.stack(losses).mean()
+
+
+def bonsai_local_replay_loss(
+    model: BonsaiResNet18,
+    local_memory: list[tuple[Tensor, Tensor, int]],
+    classes_per_task: int,
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> Tensor:
+    """Replay old task heads while updating the shared representation."""
+
+    if config.local_replay_weight < 0.0:
+        raise ValueError("local_replay_weight must be nonnegative")
+    if config.local_replay_per_task < 0:
+        raise ValueError("local_replay_per_task must be nonnegative")
+    if config.local_replay_weight == 0.0 or not local_memory:
+        return torch.zeros((), device=device)
+    losses: list[Tensor] = []
+    for inputs, labels, task_id in local_memory:
+        replay_inputs = inputs[: config.local_replay_per_task].to(device)
+        replay_labels = labels[: config.local_replay_per_task].to(device)
+        if replay_inputs.numel() == 0:
+            continue
+        local_logits = model.task_logits(replay_inputs, task_id=task_id)
+        local_labels = replay_labels.long() - task_id * classes_per_task
+        losses.append(nn.functional.cross_entropy(local_logits, local_labels))
+    if not losses:
+        return torch.zeros((), device=device)
+    return config.local_replay_weight * torch.stack(losses).mean()
 
 
 def _mean_task_loss(
@@ -491,6 +570,164 @@ def _fit_route_compatibility(
         model.train()
 
 
+def _refresh_route_state(
+    model: BonsaiResNet18,
+    calibration_memory: list[tuple[Tensor, Tensor, int]],
+    route_memory: list[tuple[Tensor, int]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+    classes_per_task: int,
+) -> None:
+    """Recompute route statistics after shared representation changes.
+
+    BONSAI rewires available shared weights between tasks. Any prototypes or
+    compatibility-head features computed before that rewire are stale for all
+    previously learned paths, so calibration must be replayed after the
+    rewire. The bounded image memory keeps this refresh deterministic and
+    avoids retaining the full task datasets on the accelerator.
+    """
+
+    if not calibration_memory:
+        return
+    for inputs, labels, task_id in calibration_memory:
+        model.register_task_route(
+            task_id,
+            inputs.to(device),
+            labels.to(device),
+            classes_per_task=classes_per_task,
+        )
+    _fit_route_discovery(model, calibration_memory, config, device)
+    _fit_route_head(model, route_memory, config, device)
+    _fit_route_compatibility(model, route_memory, config, device)
+    _fit_route_evidence(model, route_memory, config, device)
+
+
+def _fit_route_evidence(
+    model: BonsaiResNet18,
+    route_memory: list[tuple[Tensor, int]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> None:
+    """Fit path-wise calibrators on local classifier evidence."""
+
+    if not route_memory:
+        return
+    if config.route_evidence_epochs < 1:
+        raise ValueError("route_evidence_epochs must be positive")
+    if len(model.route_evidence_heads) != len(model.task_adapters):
+        return
+    was_training = model.training
+    model.eval()
+    with torch.no_grad():
+        feature_cache = []
+        for task_id in range(len(model.task_adapters)):
+            task_features = []
+            for inputs, _ in route_memory:
+                features = model.forward_features(inputs.to(device), task_id=task_id)
+                local_logits = model.task_heads[task_id](features)
+                task_features.append(model.route_evidence_features(local_logits).detach())
+            feature_cache.append(task_features)
+    optimizer = torch.optim.SGD(
+        model.route_evidence_heads.parameters(),
+        lr=config.learning_rate * 10.0,
+        momentum=0.9,
+    )
+    for _ in range(config.route_evidence_epochs):
+        optimizer.zero_grad(set_to_none=True)
+        losses: list[Tensor] = []
+        for task_id, task_features in enumerate(feature_cache):
+            head = model.route_evidence_heads[task_id]
+            for memory_id, features in enumerate(task_features):
+                targets = torch.full(
+                    (features.shape[0],),
+                    float(memory_id == task_id),
+                    dtype=torch.float32,
+                    device=device,
+                )
+                losses.append(
+                    nn.functional.binary_cross_entropy_with_logits(
+                        head(features).squeeze(-1), targets
+                    )
+                )
+        torch.stack(losses).mean().backward()
+        optimizer.step()
+    if was_training:
+        model.train()
+
+
+def _fit_route_discovery(
+    model: BonsaiResNet18,
+    calibration_memory: list[tuple[Tensor, Tensor, int]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> None:
+    """Fit the isolated input-only global-class detector."""
+
+    if not calibration_memory:
+        return
+    if config.route_discovery_epochs < 1:
+        raise ValueError("route_discovery_epochs must be positive")
+    parameters = model.route_discovery_parameters()
+    if not parameters:
+        return
+    inputs = torch.cat(
+        [memory_inputs for memory_inputs, _, _ in calibration_memory], dim=0
+    ).to(device)
+    targets = torch.cat(
+        [
+            labels.long() for _, labels, _ in calibration_memory
+        ],
+        dim=0,
+    ).to(device)
+    was_training = model.training
+    model.eval()
+    # SGD avoids the DirectML Adam lerp fallback and is sufficient for this
+    # tiny supervised calibration problem.
+    optimizer = torch.optim.SGD(parameters, lr=config.learning_rate * 10.0, momentum=0.9)
+    for _ in range(config.route_discovery_epochs):
+        optimizer.zero_grad(set_to_none=True)
+        loss = nn.functional.cross_entropy(
+            model.route_discovery_class_logits(inputs), targets
+        )
+        loss.backward()
+        optimizer.step()
+    if was_training:
+        model.train()
+
+
+def _refresh_feature_memory(
+    model: BonsaiResNet18,
+    route_memory: list[tuple[Tensor, int]],
+    config: RealBenchmarkConfig,
+    device: torch.device,
+) -> list[tuple[Tensor, int, Tensor]]:
+    """Snapshot bounded old-path features after the latest shared rewire."""
+
+    if config.feature_replay_per_task < 0:
+        raise ValueError("feature_replay_per_task must be nonnegative")
+    if not route_memory or config.feature_replay_per_task == 0:
+        return []
+    was_training = model.training
+    model.eval()
+    memory: list[tuple[Tensor, int, Tensor]] = []
+    with torch.no_grad():
+        for inputs, task_id in route_memory:
+            selected_inputs = inputs[: config.feature_replay_per_task].to(device)
+            if selected_inputs.numel() == 0:
+                continue
+            features = model.forward_features(selected_inputs, task_id=task_id)
+            memory.append(
+                (
+                    selected_inputs.detach().cpu(),
+                    task_id,
+                    features.detach().cpu(),
+                )
+            )
+    if was_training:
+        model.train()
+    return memory
+
+
 def _task_free_predict(
     model: nn.Module,
     inputs: Tensor,
@@ -605,6 +842,8 @@ def run_real_method(
         config.task_adapter_rank,
         classes_per_task=classes_per_task,
         route_hidden_dim=config.route_hidden_dim,
+        route_discovery_hidden_dim=config.route_discovery_hidden_dim,
+        adapter_residual_init_std=config.adapter_residual_init_std,
     ).to(device)
     initial_parameters = sum(parameter.numel() for parameter in model.parameters())
     ewc = model if isinstance(model, EWC) else None
@@ -622,6 +861,9 @@ def run_real_method(
     task_free_accuracy_history: list[list[float]] = []
     mask_history: dict[int, dict[str, Tensor]] = {}
     route_memory: list[tuple[Tensor, int]] = []
+    route_calibration_memory: list[tuple[Tensor, Tensor, int]] = []
+    feature_memory: list[tuple[Tensor, int, Tensor]] = []
+    local_memory: list[tuple[Tensor, Tensor, int]] = []
     global_replay: list[tuple[Tensor, Tensor]] = []
 
     for task_id, task in enumerate(tasks):
@@ -666,6 +908,12 @@ def run_real_method(
                     loss = loss + bonsai_route_training_loss(
                         model, inputs, task_id, route_memory, config, device
                     )
+                    loss = loss + bonsai_feature_replay_loss(
+                        model, feature_memory, config, device
+                    )
+                    loss = loss + bonsai_local_replay_loss(
+                        model, local_memory, classes_per_task, config, device
+                    )
                     if global_replay and config.global_replay_weight > 0.0:
                         replay_inputs, replay_labels = global_replay[
                             (batch_index + epoch_index) % len(global_replay)
@@ -709,16 +957,14 @@ def run_real_method(
             packnet.prune_by_magnitude(0.8)
         if isinstance(model, BonsaiResNet18):
             route_inputs, route_labels = _route_calibration_batch(task, config, device)
-            model.register_task_route(
-                task_id,
-                route_inputs,
-                route_labels,
-                classes_per_task=classes_per_task,
-            )
             memory_inputs = route_inputs[: config.route_memory_samples].detach().cpu()
             route_memory.append((memory_inputs, task_id))
-            _fit_route_head(model, route_memory, config, device)
-            _fit_route_compatibility(model, route_memory, config, device)
+            route_calibration_memory.append(
+                (route_inputs.detach().cpu(), route_labels.detach().cpu(), task_id)
+            )
+            local_memory.append(
+                (route_inputs.detach().cpu(), route_labels.detach().cpu(), task_id)
+            )
             if config.global_replay_per_task > 0:
                 global_replay.append(
                     (
@@ -754,6 +1000,9 @@ def run_real_method(
                     or name.startswith("task_heads.")
                     or name.startswith("route_compatibility_heads.")
                     or name.startswith("route_head.")
+                    or name.startswith("route_discovery_encoder.")
+                    or name.startswith("route_discovery_head.")
+                    or name.startswith("route_evidence_heads.")
                     or name.startswith("classifier.")
                     or name.startswith("vib.logvar_layer.")
                 }
@@ -766,6 +1015,18 @@ def run_real_method(
                     bonsai_manager.critical_masks,
                     exclude_names=excluded_names,
                 )
+        if isinstance(model, BonsaiResNet18):
+            _refresh_route_state(
+                model,
+                route_calibration_memory,
+                route_memory,
+                config,
+                device,
+                classes_per_task,
+            )
+            feature_memory = _refresh_feature_memory(
+                model, route_memory, config, device
+            )
         current_accuracies: list[float] = []
         task_free_accuracies: list[float] = []
         route_correct = 0

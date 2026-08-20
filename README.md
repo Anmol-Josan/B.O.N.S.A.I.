@@ -96,4 +96,13 @@ The route ablations and negative controls are retained beside the main result,
 including balanced prototype/compatibility routing, fused routing, route
 replay, global-head calibration, BN freezing, and rank-8 adapter capacity.
 
+The latest research iteration also refreshes all route prototypes and
+compatibility calibrators after shared rewiring, preventing stale route
+statistics. Optional `feature_replay_weight` and `local_replay_weight`
+controls preserve old feature geometry or replay old task-local heads. In a
+matched 10-task CIFAR-100 pilot, feature replay improved route accuracy by
+about 0.75 percentage points at a small task-aware cost. Local replay was
+validated on the synthetic suite only in this iteration; both controls remain
+off by default until they are validated across multiple seeds.
+
 Results are written to the configured `results/` directory as CSV/JSON summaries and PNG plots. W&B logging is opt-in with `--wandb` and `WANDB_API_KEY`.

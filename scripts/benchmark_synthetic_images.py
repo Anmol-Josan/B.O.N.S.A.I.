@@ -28,14 +28,23 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--task-adapter-rank", type=int, default=1)
+    parser.add_argument("--adapter-residual-init-std", type=float, default=0.0)
+    parser.add_argument("--rewire-strength", type=float, default=0.15)
     parser.add_argument("--validation-fraction", type=float, default=0.2)
     parser.add_argument("--route-compatibility-epochs", type=int, default=3)
     parser.add_argument("--route-hidden-dim", type=int, default=64)
+    parser.add_argument("--route-discovery-hidden-dim", type=int, default=32)
+    parser.add_argument("--route-discovery-epochs", type=int, default=10)
+    parser.add_argument("--route-evidence-epochs", type=int, default=3)
     parser.add_argument("--route-training-weight", type=float, default=0.0)
     parser.add_argument("--route-replay-per-task", type=int, default=16)
+    parser.add_argument("--feature-replay-weight", type=float, default=0.0)
+    parser.add_argument("--feature-replay-per-task", type=int, default=16)
+    parser.add_argument("--local-replay-weight", type=float, default=0.0)
+    parser.add_argument("--local-replay-per-task", type=int, default=16)
     parser.add_argument(
         "--route-strategy",
-        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility", "fused", "global_argmax", "local_energy", "global_direct", "cosine"),
+        choices=("entropy", "prototype", "hybrid", "learned", "scaffold", "compatibility", "fused", "global_argmax", "local_energy", "global_direct", "cosine", "discovery", "evidence"),
         default="compatibility",
     )
     parser.add_argument(
@@ -70,13 +79,22 @@ def main() -> None:
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
             task_adapter_rank=args.task_adapter_rank,
+            adapter_residual_init_std=args.adapter_residual_init_std,
+            rewire_strength=args.rewire_strength,
             route_strategy=args.route_strategy,
             route_head_epochs=3,
             route_compatibility_epochs=args.route_compatibility_epochs,
             route_hidden_dim=args.route_hidden_dim,
+            route_discovery_hidden_dim=args.route_discovery_hidden_dim,
+            route_discovery_epochs=args.route_discovery_epochs,
+            route_evidence_epochs=args.route_evidence_epochs,
             device=args.device,
             route_training_weight=args.route_training_weight,
             route_replay_per_task=args.route_replay_per_task,
+            feature_replay_weight=args.feature_replay_weight,
+            feature_replay_per_task=args.feature_replay_per_task,
+            local_replay_weight=args.local_replay_weight,
+            local_replay_per_task=args.local_replay_per_task,
         )
         for method in methods:
             record, history, masks = run_real_method(

@@ -5,6 +5,7 @@ samples_per_class: 32
 output_dir: results/toy_benchmark
 use_wandb: false
 adapter_rank: 1
+adapter_residual_init_std: 0.0
 encoder_learning_rate_scale: 0.1
 rewire_strength: 0.15
 max_frozen_fraction: 0.65
@@ -19,6 +20,9 @@ route_memory_samples: 64
 route_head_epochs: 3
 route_compatibility_epochs: 3
 route_hidden_dim: 64
+route_discovery_hidden_dim: 32
+route_discovery_epochs: 10
+route_evidence_epochs: 3
 route_head_weight: 1.0
 global_loss_weight: 0.5
 global_replay_per_task: 64
@@ -28,6 +32,10 @@ shared_learning_rate_scale: 0.1
 global_route_weight: 1.0
 route_training_weight: 0.0
 route_replay_per_task: 16
+feature_replay_weight: 0.0
+feature_replay_per_task: 16
+local_replay_weight: 0.0
+local_replay_per_task: 16
 classifier_learning_rate_scale: 1.0
 freeze_backbone_bn: false
 max_samples_per_class: null

@@ -43,7 +43,9 @@ def test_bonsai_task_adapter_path_is_small_and_task_selectable() -> None:
 
 def test_bonsai_can_route_real_image_features_without_a_task_id() -> None:
     torch.manual_seed(2)
-    model = BonsaiResNet18(num_classes=6, task_adapter_rank=1)
+    model = BonsaiResNet18(
+        num_classes=6, classes_per_task=3, task_adapter_rank=1
+    )
     model.add_task_path()
     model.add_task_path()
     inputs = torch.randn(4, 3, 32, 32)
@@ -89,6 +91,16 @@ def test_bonsai_can_route_real_image_features_without_a_task_id() -> None:
     )
     assert cosine_predictions.shape == (4,)
     assert cosine_tasks.max() < 2
+    discovery_predictions, discovery_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="discovery"
+    )
+    assert discovery_predictions.shape == (4,)
+    assert discovery_tasks.max() < 2
+    evidence_predictions, evidence_tasks, _ = model.predict_task_free(
+        inputs, classes_per_task=3, route_strategy="evidence"
+    )
+    assert evidence_predictions.shape == (4,)
+    assert evidence_tasks.max() < 2
 
 
 def test_bonsai_real_mode_uses_private_local_heads() -> None:
@@ -148,6 +160,27 @@ def test_task_parameter_groups_keep_old_paths_out_of_the_optimizer() -> None:
     assert id(next(model.route_compatibility_heads[0].parameters())) not in optimized
     assert id(next(model.route_compatibility_heads[1].parameters())) in optimized
     assert id(model.classifier.weight) in optimized
+    assert not optimized.intersection(
+        {id(parameter) for parameter in model.route_discovery_parameters()}
+    )
+
+
+def test_input_only_route_discovery_branch_is_compact_and_exposed() -> None:
+    model = BonsaiResNet18(
+        num_classes=6,
+        classes_per_task=3,
+        task_adapter_rank=1,
+        route_discovery_hidden_dim=12,
+    )
+    assert model.route_discovery_logits(torch.randn(2, 3, 32, 32)).shape == (2, 2)
+    assert sum(parameter.numel() for parameter in model.route_discovery_parameters()) < 100_000
+
+
+def test_local_classifier_evidence_has_expected_calibration_features() -> None:
+    logits = torch.randn(4, 3)
+    features = BonsaiResNet18.route_evidence_features(logits)
+    assert features.shape == (4, 7)
+    assert torch.isfinite(features).all()
 
 
 def test_task_parameter_groups_can_accelerate_the_global_classifier_separately() -> None:
@@ -176,6 +209,17 @@ def test_bonsai_supports_compact_nonlinear_route_heads() -> None:
     logits = model.route_compatibility_heads[0](torch.randn(2, 512))
 
     assert logits.shape == (2, 1)
+
+
+def test_bonsai_can_configure_nonzero_task_adapter_initialization() -> None:
+    model = BonsaiResNet18(
+        num_classes=6,
+        classes_per_task=3,
+        task_adapter_rank=1,
+        adapter_residual_init_std=0.02,
+    )
+    model.add_task_path()
+    assert model.task_adapters[0].up.weight.abs().sum() > 0
 
 
 def test_bonsai_uses_a_nonlinear_shared_route_gate_when_configured() -> None:
