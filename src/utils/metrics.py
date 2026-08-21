@@ -16,7 +16,13 @@ def average_accuracy(current_accuracies: Sequence[float]) -> float:
 
 
 def forgetting_measure(accuracy_history: Sequence[Sequence[float]]) -> float:
-    """Compute F_T from rows recorded after each sequential task."""
+    """Compute final average forgetting from the standard peak-before-final score.
+
+    For each task ``i`` that is present before the final step, the reference is
+    the best accuracy observed for that task at any evaluation step from its
+    first exposure through the penultimate step.  The result may be negative
+    when the final model improves an old task beyond every earlier checkpoint.
+    """
 
     if len(accuracy_history) <= 1:
         return 0.0
@@ -26,8 +32,17 @@ def forgetting_measure(accuracy_history: Sequence[Sequence[float]]) -> float:
         return 0.0
     forgetting = []
     for task_id in range(prior_task_count):
-        best_after_learning = accuracy_history[task_id][task_id]
-        forgetting.append(best_after_learning - current[task_id])
+        observed = [
+            row[task_id]
+            for row in accuracy_history[task_id:-1]
+            if len(row) > task_id
+        ]
+        if not observed:
+            continue
+        best_before_final = max(observed)
+        forgetting.append(best_before_final - current[task_id])
+    if not forgetting:
+        return 0.0
     return float(sum(forgetting) / len(forgetting))
 
 
@@ -45,4 +60,3 @@ def save_metrics_json(destination: str | Path, payload: dict) -> None:
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-

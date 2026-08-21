@@ -48,13 +48,13 @@ buffer, residual orthogonal rewiring, and prototype-assisted task routing by
 default. Use `--route-strategy entropy` to reproduce the original entropy-only
 selector, or `--replay-per-task 0` for a no-replay control.
 
-The image runner now evaluates on the held-out CIFAR-100 test or TinyImageNet
+The image runner evaluates on the held-out CIFAR-100 test or TinyImageNet
 validation task split, uses a train-only validation partition for growth
 triggers, and allocates a low-rank task adapter for BONSAI. Its class-incremental
-evaluation routes images without passing a task ID. A real
-dataset run is still required before making a claim against EWC, SI, PackNet, or
-PNN; the synthetic artifacts are mechanism tests, not a substitute for that
-benchmark.
+evaluation routes images without passing a task ID. The matched replay review
+suite now supplies the real-image comparison against ER, DER++, and ER-ACE;
+the current-core benchmark now supplies the same-backbone EWC, SI, PackNet,
+and PNN comparison.
 
 For a larger image-side mechanism test without downloading a dataset:
 
@@ -106,3 +106,122 @@ validated on the synthetic suite only in this iteration; both controls remain
 off by default until they are validated across multiple seeds.
 
 Results are written to the configured `results/` directory as CSV/JSON summaries and PNG plots. W&B logging is opt-in with `--wandb` and `WANDB_API_KEY`.
+
+## IEEE paper
+
+The publication-formatted source is `paper/BONSAI_IEEE.tex`, with the local
+IEEEtran class, BibTeX style, bibliography, and seven generated figures. The
+compiled PDF is `output/pdf/BONSAI_IEEE.pdf`. From the repository root, a
+MiKTeX/TeX Live build is:
+
+```powershell
+Set-Location paper
+pdflatex -interaction=nonstopmode BONSAI_IEEE.tex
+bibtex BONSAI_IEEE
+pdflatex -interaction=nonstopmode BONSAI_IEEE.tex
+pdflatex -interaction=nonstopmode BONSAI_IEEE.tex
+```
+
+The manuscript compares the current modular results with EWC, SI, PackNet,
+and PNN on the same current VIB/MLP core. It includes the five-seed primary
+benchmark, the complete four-cell task/feature grid, repository scaling,
+ablations, architecture trade-offs, and reproducible citations.
+
+The review-expansion artifacts add the experiments that were previously
+missing from that manuscript:
+
+```powershell
+python scripts/benchmark_real_replay.py --output results/real_replay_cifar100_review.json --data-root data/cifar100 --seeds 7 17 --order-count 3 --epochs 2 --train-samples-per-class 8 --test-samples-per-class 20 --memory-per-task 20 --batch-size 64
+python scripts/benchmark_atgfr_ablation.py --output results/atgfr_component_ablation.json --seeds 7 17 27 --epochs 3
+```
+
+The first command evaluates ER, DER++, ER-ACE, and ATGFR on the same
+compact-CNN backbone, exemplar count, Split-CIFAR-100 stream, optimizer, and
+task orders. It records wall-clock time and scalar memory for labels-only,
+logit, and feature targets. The second command independently removes replay
+terms, OT, H0 persistence, graph geometry, and the drift thermostat. Results
+are intentionally retained even when an ablation is weaker; the current
+mass-preserving relation normalization keeps graph weighting from silently
+changing the total replay budget.
+
+## Topological--Riemannian BONSAI architecture
+
+The current architecture is implemented in `src/bonsai/`:
+
+```text
+VIB encoder -> task repository/hierarchy -> OT/TDA scoring
+            -> local SPD Riemannian routing -> sparse sheaf compatibility
+            -> shared low-rank adapter -> classifier
+```
+
+The modules are intentionally separate: `vib.py`, `repository.py`, `hierarchy.py`,
+`ot.py`, `tda.py`, `geometry.py`, `sheaf.py`, `adapters.py`, `router.py`,
+`continual.py`, `metrics.py`, and `evaluation.py`. `BONSAISystem` composes them.
+Repository OT and H0 persistence descriptors are cached at task insertion. A
+single-example route uses prototypes and local geometry; OT/TDA are only added
+when a real episode/context batch is supplied. The TDA implementation is exact
+zero-dimensional Vietoris--Rips persistence via an MST, rather than an
+unsupported claim about higher-dimensional holes. The tangent `Log` map is the
+explicit local chart approximation `z - p`, and the metric is guaranteed SPD by
+bounded positive diagonal terms plus PSD low-rank updates.
+
+Run the architecture-specific checks and measured scaling/ablation suite with:
+
+```powershell
+pytest -q
+python scripts/benchmark_architecture.py --output results/architecture_metrics_full.json
+python scripts/benchmark_architecture.py --output results/architecture_metrics_atgfr.json --comparison-seeds 7 17 27 --run-robustness-matrix
+```
+
+The scaling command measures 4, 8, 16, 32, and 50 task repositories without
+pretending that precomputed latent-cloud routing is evidence that an encoder
+learned those representations. See `ARCHITECTURE_REPORT.md` for the measured
+results, mathematical assessment, deviations, and remaining research issues.
+
+The current continual-learning research variant is enabled by default in the
+new training entry point:
+
+```powershell
+python scripts/train.py --continual-method tgrsc
+```
+
+TGRSC (Topology-Gated Riemannian Subspace Consolidation) stores a compact
+gradient subspace for the shared VIB encoder, gates retention by cached OT/TDA
+task similarity, and projects only directionally conflicting updates. It is a
+research variant related to gradient-projection methods, not a claim of
+universal prior-art novelty; its matched multi-seed evidence and limitations
+are recorded in `ARCHITECTURE_REPORT.md`.
+
+The repository also includes ATGTR (Adaptive Task-Graph Trust-Region), enabled
+with `python scripts/train.py --continual-method atgtr`. ATGTR solves a small
+regularized quadratic projection only when a proposed gradient would violate a
+bounded old-task loss-increase constraint. Its constraint rows are relation-
+gated by the cached OT/TDA/Riemannian task graph, with a tight mean-gradient
+budget and relaxed orthogonal-subspace budgets. The fixed four-cell stress grid
+in `results/architecture_metrics_atgfr.json` covers 2/8 tasks crossed with 8/128
+input features over three seeds; it is intentionally reported alongside the
+baseline and TGRSC rather than as a selected best case. The default ATGTR path
+uses a four-task compact reservoir so consolidation memory remains bounded.
+
+The forgetting-focused variant is ATGFR (Adaptive Task-Graph Functional
+Replay), enabled with `python scripts/train.py --continual-method atgfr`. It
+stores a small class-balanced training coreset per task, distills
+the old logits/features, and increases replay strength only when measured old
+feature drift exceeds a budget. In the corrected five-seed new-version image
+benchmark with mass-preserving relation normalization it reduced task-aware
+forgetting from `0.3778` to `-0.2000` and raised task-aware accuracy from
+`0.1000` to `0.6333`. The complete component ablation shows that functional
+replay is supported, while every OT/TDA/thermostat contribution is not yet
+universally beneficial.
+
+To evaluate the new modular BONSAI variants and their matched current-core
+controls on the same structured image stream, run:
+
+```powershell
+python scripts/benchmark_new_version.py --output results/new_version_image_comparison_5seed.json --seeds 7 17 27 37 47 --num-tasks 4 --classes-per-task 3 --train-samples-per-class 24 --test-samples-per-class 12 --image-size 32 --noise 0.1 --epochs 5 --batch-size 32
+python scripts/benchmark_current_baselines.py --output results/current_backbone_baselines.json --seeds 7 17 27 37 47 --num-tasks 4 --classes-per-task 3 --train-samples-per-class 24 --test-samples-per-class 12 --image-size 32 --noise 0.1 --epochs 5 --batch-size 32
+```
+
+The second command runs EWC, SI, PackNet, and PNN on the same 199,148-parameter
+current VIB/MLP core. PNN is task-aware-only and uses four frozen copies;
+EWC/SI/PackNet have global class heads and task-free inference.
