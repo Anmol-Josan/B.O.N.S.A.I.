@@ -1,0 +1,795 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.8.22)  22 AUG 2026 20:23
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**./BONSAI_IEEE.tex
+(BONSAI_IEEE.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(IEEEtran.cls
+Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
+-- See the "IEEEtran_HOWTO" manual for usage information.
+-- http://www.michaelshell.org/tex/ieeetran/
+\@IEEEtrantmpdimenA=\dimen148
+\@IEEEtrantmpdimenB=\dimen149
+\@IEEEtrantmpdimenC=\dimen150
+\@IEEEtrantmpcountA=\count275
+\@IEEEtrantmpcountB=\count276
+\@IEEEtrantmpcountC=\count277
+\@IEEEtrantmptoksA=\toks17
+LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 5
+03.
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+-- Using 8.5in x 11in (letter) paper.
+-- Using PDF output.
+\@IEEEnormalsizeunitybaselineskip=\dimen151
+-- This is a 10 point document.
+LaTeX Encoding Info:    Redeclaring text command \textunderscore (encoding ?) o
+n input line 937.
+\CLASSINFOnormalsizebaselineskip=\dimen152
+\CLASSINFOnormalsizeunitybaselineskip=\dimen153
+\IEEEnormaljot=\dimen154
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <11> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <11> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <17> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <20> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <20> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <24> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <24> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
+\IEEEquantizedlength=\dimen155
+\IEEEquantizedlengthdiff=\dimen156
+\IEEEquantizedtextheightdiff=\dimen157
+\IEEEilabelindentA=\dimen158
+\IEEEilabelindentB=\dimen159
+\IEEEilabelindent=\dimen160
+\IEEEelabelindent=\dimen161
+\IEEEdlabelindent=\dimen162
+\IEEElabelindent=\dimen163
+\IEEEiednormlabelsep=\dimen164
+\IEEEiedmathlabelsep=\dimen165
+\IEEEiedtopsep=\skip49
+\c@section=\count278
+\c@subsection=\count279
+\c@subsubsection=\count280
+\c@paragraph=\count281
+\c@IEEEsubequation=\count282
+\abovecaptionskip=\skip50
+\belowcaptionskip=\skip51
+\c@figure=\count283
+\c@table=\count284
+\@IEEEeqnnumcols=\count285
+\@IEEEeqncolcnt=\count286
+\@IEEEsubeqnnumrollback=\count287
+\@IEEEquantizeheightA=\dimen166
+\@IEEEquantizeheightB=\dimen167
+\@IEEEquantizeheightC=\dimen168
+\@IEEEquantizeprevdepth=\dimen169
+\@IEEEquantizemultiple=\count288
+\@IEEEquantizeboxA=\box53
+\@IEEEtmpitemindent=\dimen170
+\IEEEPARstartletwidth=\dimen171
+\c@IEEEbiography=\count289
+\@IEEEtranrubishbin=\box54
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
+LaTeX Font Info:    Trying to load font information for T1+ptm on input line 11
+6.
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1ptm.fd
+File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
+)) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
+Package: inputenc 2024/02/08 v1.3d Input encoding file
+\inpenc@prehook=\toks18
+\inpenc@posthook=\toks19
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+Package: amsmath 2025/07/09 v2.17z AMS math features
+\@mathmargin=\skip52
+For additional information on amsmath, use the `?' option.
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+Package: amstext 2024/11/17 v2.01 AMS text
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks20
+\ex@=\dimen172
+)) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen173
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count290
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count291
+\leftroot@=\count292
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count293
+\DOTSCASE@=\count294
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box55
+\strutbox@=\box56
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen174
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count295
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count296
+\dotsspace@=\muskip17
+\c@parentequation=\count297
+\dspbrk@lvl=\count298
+\tag@help=\toks21
+\row@=\count299
+\column@=\count300
+\maxfields@=\count301
+\andhelp@=\toks22
+\eqnshift@=\dimen175
+\alignsep@=\dimen176
+\tagshift@=\dimen177
+\tagwidth@=\dimen178
+\totwidth@=\dimen179
+\lineht@=\dimen180
+\@envbody=\toks23
+\multlinegap=\skip53
+\multlinetaggap=\skip54
+\mathdisplay@stack=\toks24
+LaTeX Info: Redefining \[ on input line 2950.
+LaTeX Info: Redefining \] on input line 2951.
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+)) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.s
+ty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks25
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.st
+y
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.
+cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdftex.de
+f
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen181
+\Gin@req@width=\dimen182
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
+\col@sep=\dimen183
+\ar@mcellbox=\box57
+\extrarowheight=\dimen184
+\NC@list=\toks26
+\extratabsurround=\skip55
+\backup@length=\skip56
+\ar@cellbox=\box58
+) (C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
+\Urlmuskip=\muskip18
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pd
+ftex.def
+File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count302
+)
+No file BONSAI_test.aux.
+\openout1 = `BONSAI_test.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+-- Lines per column: 56 (exact).
+
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.m
+kii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count303
+\scratchdimen=\dimen185
+\scratchbox=\box59
+\nofMPsegments=\count304
+\nofMParguments=\count305
+\everyMPshowfont=\toks27
+\MPscratchCnt=\count306
+\MPscratchDim=\dimen186
+\MPnumerator=\count307
+\makeMPintoPDFobject=\count308
+\everyMPtoPDFconversion=\toks28
+)
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-
+base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.
+cfg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
+))
+
+LaTeX Warning: Citation `mccloskey1989catastrophic' on page 1 undefined on inpu
+t line 72.
+
+
+LaTeX Warning: Citation `kirkpatrick2017ewc' on page 1 undefined on input line 
+79.
+
+
+LaTeX Warning: Citation `zenke2017si' on page 1 undefined on input line 79.
+
+
+LaTeX Warning: Citation `lopezpaz2017gem' on page 1 undefined on input line 80.
+
+
+
+LaTeX Warning: Citation `saha2021gpm' on page 1 undefined on input line 80.
+
+
+LaTeX Warning: Citation `mallya2018packnet' on page 1 undefined on input line 8
+2.
+
+
+LaTeX Warning: Citation `rusu2016progressive' on page 1 undefined on input line
+ 82.
+
+
+LaTeX Warning: Citation `rolnick2019replay' on page 1 undefined on input line 8
+4.
+
+
+LaTeX Warning: Citation `buzzega2020der' on page 1 undefined on input line 84.
+
+
+LaTeX Warning: Citation `rebuffi2017icarl' on page 1 undefined on input line 84
+.
+
+
+LaTeX Warning: Citation `shin2017generative' on page 1 undefined on input line 
+84.
+
+
+Underfull \hbox (badness 1946) in paragraph at lines 102--106
+\T1/ptm/m/n/10 a vari-a-tional in-for-ma-tion bot-tle-neck (VIB), cached
+ []
+
+
+Underfull \hbox (badness 1748) in paragraph at lines 109--112
+[]\T1/ptm/m/n/10 A matched real-image mech-a-nism study on Split-
+ []
+
+[1{C:/Users/ajosan/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/a
+josan/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
+
+
+]
+
+LaTeX Warning: Citation `vandeven2019three' on page 2 undefined on input line 1
+36.
+
+
+LaTeX Warning: Citation `delange2023survey' on page 2 undefined on input line 1
+41.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 134--144
+[]\T1/ptm/m/n/10 Task-incremental, domain-incremental, and class-
+ []
+
+
+Underfull \hbox (badness 1609) in paragraph at lines 134--144
+\T1/ptm/m/n/10 incremental learn-ing have dif-fer-ent in-for-ma-tion avail-able
+
+ []
+
+
+LaTeX Warning: Citation `kirkpatrick2017ewc' on page 2 undefined on input line 
+148.
+
+
+LaTeX Warning: Citation `zenke2017si' on page 2 undefined on input line 149.
+
+
+LaTeX Warning: Citation `lopezpaz2017gem' on page 2 undefined on input line 150
+.
+
+
+LaTeX Warning: Citation `saha2021gpm' on page 2 undefined on input line 151.
+
+
+LaTeX Warning: Citation `mallya2018packnet' on page 2 undefined on input line 1
+53.
+
+
+LaTeX Warning: Citation `rusu2016progressive' on page 2 undefined on input line
+ 154.
+
+
+LaTeX Warning: Citation `rolnick2019replay' on page 2 undefined on input line 1
+61.
+
+
+LaTeX Warning: Citation `rebuffi2017icarl' on page 2 undefined on input line 16
+2.
+
+
+LaTeX Warning: Citation `buzzega2020der' on page 2 undefined on input line 163.
+
+
+
+LaTeX Warning: Citation `shin2017generative' on page 2 undefined on input line 
+164.
+
+
+LaTeX Warning: Citation `caccia2022representation' on page 2 undefined on input
+ line 170.
+
+
+LaTeX Warning: Citation `wang2022foster' on page 2 undefined on input line 172.
+
+
+
+Underfull \hbox (badness 1546) in paragraph at lines 168--175
+[]\T1/ptm/m/n/10 The matched real-image study there-fore in-cludes ER,
+ []
+
+
+LaTeX Warning: Citation `houlsby2019adapters' on page 2 undefined on input line
+ 177.
+
+
+LaTeX Warning: Citation `alemi2017vib' on page 2 undefined on input line 179.
+
+
+LaTeX Warning: Citation `rabin2011barycenter' on page 2 undefined on input line
+ 181.
+
+
+LaTeX Warning: Citation `edelsbrunner2002persistence' on page 2 undefined on in
+put line 183.
+
+LaTeX Font Info:    Trying to load font information for U+msa on input line 191
+.
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 191
+.
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 20
+7.
+(C:\Users\ajosan\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+
+LaTeX Warning: Citation `alemi2017vib' on page 2 undefined on input line 220.
+
+[2]
+Overfull \hbox (28.61676pt too wide) detected at line 290
+[]
+ []
+
+
+Overfull \hbox (24.46887pt too wide) detected at line 298
+[]\OML/cmm/m/it/10 ^^N[] \OT1/cmr/m/n/10 = []\OML/cmm/m/it/10 ;  h[] \OT1/cmr/m
+/n/10 = [] [] \OML/cmm/m/it/10 ;
+ []
+
+<figures/figure1_architecture_overview.pdf, id=21, 742.57423pt x 243.57967pt>
+File: figures/figure1_architecture_overview.pdf Graphic file (type pdf)
+<use figures/figure1_architecture_overview.pdf>
+Package pdftex.def Info: figures/figure1_architecture_overview.pdf  used on inp
+ut line 316.
+(pdftex.def)             Requested size: 495.36346pt x 162.49133pt.
+
+Underfull \hbox (badness 10000) in paragraph at lines 384--384
+[]|\T1/ptm/b/n/9 Preservation
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 387--387
+[]|\T1/ptm/m/n/9 Diagonal
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 387--387
+\T1/ptm/m/n/9 pa-ram-e-ter
+ []
+
+
+Underfull \hbox (badness 5696) in paragraph at lines 388--389
+[]|\T1/ptm/m/n/9 Legacy ResNet con-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 389--389
+[]|$\OML/cmm/m/it/9 O\OT1/cmr/m/n/9 (\OML/cmm/m/it/9 P\OT1/cmr/m/n/9 )$
+ []
+
+
+Underfull \hbox (badness 2173) in paragraph at lines 391--391
+[]|\T1/ptm/m/n/9 Frozen pruned
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 393--393
+[]|\T1/ptm/m/n/9 Frozen task
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 393--393
+[]|\T1/ptm/m/n/9 Task-column
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 395--395
+[]|\T1/ptm/m/n/9 Global
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 396--397
+[]|\T1/ptm/m/n/9 Matched CIFAR-100
+ []
+
+
+Underfull \hbox (badness 5924) in paragraph at lines 397--397
+[]|\T1/ptm/m/n/9 Examples and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 397--397
+[]|\T1/ptm/m/n/9 Global
+ []
+
+
+Underfull \hbox (badness 3019) in paragraph at lines 398--398
+[]|\T1/ptm/m/n/9 Functional dis-til-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 398--399
+[]|\T1/ptm/m/n/9 Matched CIFAR-100
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 399--399
+[]|\T1/ptm/m/n/9 Global
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 400--400
+[]|\T1/ptm/m/n/9 Task-boundary
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 400--401
+[]|\T1/ptm/m/n/9 Matched CIFAR-100
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 401--401
+[]|\T1/ptm/m/n/9 Low-rank
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 402--402
+[]|\T1/ptm/m/sc/9 BONSAI
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 402--402
+[]|\T1/ptm/m/n/9 Conflict-aware
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 402--403
+[]|\T1/ptm/m/n/9 Five-seed mod-u-lar
+ []
+
+
+Underfull \hbox (badness 5771) in paragraph at lines 403--403
+[]|\T1/ptm/m/n/9 Bounded reser-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 404--404
+[]|\T1/ptm/m/sc/9 BONSAI
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 404--404
+[]|\T1/ptm/m/n/9 Explicit up-date
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 404--405
+[]|\T1/ptm/m/n/9 Five-seed mod-u-lar
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 406--406
+[]|\T1/ptm/m/sc/9 BONSAI
+ []
+
+
+Underfull \hbox (badness 7064) in paragraph at lines 406--407
+[]|\T1/ptm/m/n/9 Five-seed com-par-i-son
+ []
+
+[3]
+Overfull \hbox (60.0pt too wide) in paragraph at lines 442--442
+[] \T1/pcr/m/n/10 --output results/real_replay_cifar100_review.json ^[] 
+ []
+
+
+Overfull \hbox (90.0pt too wide) in paragraph at lines 442--442
+[] \T1/pcr/m/n/10 --data-root data/cifar100 --seeds 7 17 --order-count 3 ^[] 
+ []
+
+
+Overfull \hbox (138.0pt too wide) in paragraph at lines 442--442
+[] \T1/pcr/m/n/10 --test-samples-per-class 20 --memory-per-task 20 --batch-size
+ 64[] 
+ []
+
+
+Overfull \hbox (12.0pt too wide) in paragraph at lines 442--442
+[]\T1/pcr/m/n/10 python scripts/benchmark_atgfr_ablation.py ^[] 
+ []
+
+
+Overfull \hbox (42.0pt too wide) in paragraph at lines 442--442
+[] \T1/pcr/m/n/10 --output results/atgfr_component_ablation.json ^[] 
+ []
+
+
+LaTeX Warning: Reference `tab:primary' on page 4 undefined on input line 450.
+
+[4 <./figures/figure1_architecture_overview.pdf>]
+Overfull \hbox (16.42581pt too wide) in paragraph at lines 464--484
+ [][] 
+ []
+
+<figures/figure2_new_modular_comparison.pdf, id=119, 906.28609pt x 266.22475pt>
+
+File: figures/figure2_new_modular_comparison.pdf Graphic file (type pdf)
+<use figures/figure2_new_modular_comparison.pdf>
+Package pdftex.def Info: figures/figure2_new_modular_comparison.pdf  used on in
+put line 498.
+(pdftex.def)             Requested size: 495.36346pt x 145.5141pt.
+
+LaTeX Warning: Reference `tab:realreplay' on page 5 undefined on input line 507
+.
+
+<figures/figure8_real_replay.pdf, id=120, 885.19484pt x 273.83104pt>
+File: figures/figure8_real_replay.pdf Graphic file (type pdf)
+<use figures/figure8_real_replay.pdf>
+Package pdftex.def Info: figures/figure8_real_replay.pdf  used on input line 54
+8.
+(pdftex.def)             Requested size: 495.36346pt x 153.23569pt.
+
+LaTeX Warning: Reference `fig:orders' on page 5 undefined on input line 557.
+
+<figures/figure10_order_sensitivity.pdf, id=121, 682.8388pt x 273.83693pt>
+File: figures/figure10_order_sensitivity.pdf Graphic file (type pdf)
+<use figures/figure10_order_sensitivity.pdf>
+Package pdftex.def Info: figures/figure10_order_sensitivity.pdf  used on input 
+line 567.
+(pdftex.def)             Requested size: 495.36346pt x 198.6583pt.
+
+LaTeX Warning: Reference `tab:robustness' on page 5 undefined on input line 575
+.
+
+<figures/figure3_robustness_grid.pdf, id=122, 811.13715pt x 286.94829pt>
+File: figures/figure3_robustness_grid.pdf Graphic file (type pdf)
+<use figures/figure3_robustness_grid.pdf>
+Package pdftex.def Info: figures/figure3_robustness_grid.pdf  used on input lin
+e 605.
+(pdftex.def)             Requested size: 495.36346pt x 175.2396pt.
+<figures/figure4_scaling.pdf, id=123, 718.38412pt x 273.83693pt>
+File: figures/figure4_scaling.pdf Graphic file (type pdf)
+<use figures/figure4_scaling.pdf>
+Package pdftex.def Info: figures/figure4_scaling.pdf  used on input line 624.
+(pdftex.def)             Requested size: 495.36346pt x 188.82649pt.
+<figures/figure5_training_ablation.pdf, id=124, 682.24326pt x 273.3072pt>
+File: figures/figure5_training_ablation.pdf Graphic file (type pdf)
+<use figures/figure5_training_ablation.pdf>
+Package pdftex.def Info: figures/figure5_training_ablation.pdf  used on input l
+ine 681.
+(pdftex.def)             Requested size: 495.36346pt x 198.44914pt.
+
+LaTeX Warning: Reference `fig:components' on page 5 undefined on input line 683
+.
+
+<figures/figure9_component_ablation.pdf, id=125, 862.92413pt x 272.78337pt>
+File: figures/figure9_component_ablation.pdf Graphic file (type pdf)
+<use figures/figure9_component_ablation.pdf>
+Package pdftex.def Info: figures/figure9_component_ablation.pdf  used on input 
+line 689.
+(pdftex.def)             Requested size: 495.36346pt x 156.59114pt.
+<figures/figure6_legacy_baselines.pdf, id=126, 718.38412pt x 273.83104pt>
+File: figures/figure6_legacy_baselines.pdf Graphic file (type pdf)
+<use figures/figure6_legacy_baselines.pdf>
+Package pdftex.def Info: figures/figure6_legacy_baselines.pdf  used on input li
+ne 710.
+(pdftex.def)             Requested size: 495.36346pt x 188.82245pt.
+
+LaTeX Warning: Reference `fig:frontier' on page 5 undefined on input line 719.
+
+
+Underfull \hbox (badness 2050) in paragraph at lines 719--727
+[]\T1/ptm/m/n/10 Figure [] shows ev-ery primary-seed point and each
+ []
+
+<figures/figure7_accuracy_memory_frontier.pdf, id=127, 450.9851pt x 298.27788pt
+>
+File: figures/figure7_accuracy_memory_frontier.pdf Graphic file (type pdf)
+<use figures/figure7_accuracy_memory_frontier.pdf>
+Package pdftex.def Info: figures/figure7_accuracy_memory_frontier.pdf  used on 
+input line 730.
+(pdftex.def)             Requested size: 252.0pt x 166.6749pt.
+[5]
+
+LaTeX Warning: Reference `eq:atgfr' on page 6 undefined on input line 744.
+
+
+LaTeX Warning: Reference `eq:thermostat' on page 6 undefined on input line 747.
+
+
+[6 <./figures/figure2_new_modular_comparison.pdf>]
+Underfull \vbox (badness 3039) has occurred while \output is active []
+
+[7 <./figures/figure8_real_replay.pdf> <./figures/figure10_order_sensitivity.pd
+f>]
+Underfull \hbox (badness 1895) in paragraph at lines 801--803
+[]\T1/ptm/b/n/10 Storage and pri-vacy: \T1/ptm/m/n/10 eval-u-ate feature-only, 
+com-
+ []
+
+
+Underfull \hbox (badness 3635) in paragraph at lines 803--805
+[]\T1/ptm/b/n/10 Deployment rout-ing: \T1/ptm/m/n/10 add ab-sten-tion and out-o
+f-
+ []
+
+No file BONSAI_test.bbl.
+
+** Conference Paper **
+Before submitting the final camera ready copy, remember to:
+
+ 1. Manually equalize the lengths of two columns on the last page
+ of your paper;
+
+ 2. Ensure that any PostScript and/or PDF output post-processing
+ uses only Type 1 fonts and that every step in the generation
+ process uses the appropriate paper size.
+
+[8 <./figures/figure3_robustness_grid.pdf> <./figures/figure4_scaling.pdf>] [9 
+<./figures/figure5_training_ablation.pdf> <./figures/figure9_component_ablation
+.pdf>] [10 <./figures/figure6_legacy_baselines.pdf>] [11
+
+
+ <./figures/figure7_accuracy_memory_frontier.pdf>] (BONSAI_test.aux)
+ ***********
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+ ***********
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 4036 strings out of 467871
+ 65683 string characters out of 5417892
+ 496194 words of memory out of 5000000
+ 32876 multiletter control sequences out of 15000+600000
+ 752875 words of font info for 161 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 57i,19n,65p,386b,282s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/ajosan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm
+/cmex10.pfb><C:/Users/ajosan/AppData/Local/Programs/MiKTeX/fonts/type1/public/a
+msfonts/cm/cmmi10.pfb><C:/Users/ajosan/AppData/Local/Programs/MiKTeX/fonts/type
+1/public/amsfonts/cm/cmmi5.pfb><C:/Users/ajosan/AppData/Local/Programs/MiKTeX/f
+onts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/ajosan/AppData/Local/Programs
+/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi9.pfb><C:/Users/ajosan/AppData/Local
+/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/ajosan/AppD
+ata/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/ajo
+san/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr9.pfb><C:/U
+sers/ajosan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10
+.pfb><C:/Users/ajosan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts
+/cm/cmsy7.pfb><C:/Users/ajosan/AppData/Local/Programs/MiKTeX/fonts/type1/public
+/amsfonts/cm/cmsy9.pfb><C:/Users/ajosan/AppData/Local/Programs/MiKTeX/fonts/typ
+e1/public/amsfonts/symbols/msam10.pfb><C:/Users/ajosan/AppData/Local/Programs/M
+iKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/ajosan/AppData/L
+ocal/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/ajosan/AppDat
+a/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/ajosan/AppDa
+ta/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/ajosan/App
+Data/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/ajosan/Ap
+pData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on BONSAI_test.pdf (11 pages, 532676 bytes).
+PDF statistics:
+ 978 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 51 words of extra memory for PDF output out of 10000 (max. 10000000)
+
