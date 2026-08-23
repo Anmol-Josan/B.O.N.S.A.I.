@@ -1,0 +1,303 @@
+{
+  "scaling": [
+    {
+      "task_count": 4,
+      "routing_accuracy": 1.0,
+      "candidate_count": 4.0,
+      "candidate_reduction": 0.0,
+      "retrieval_latency_ms": 0.2196749992435798,
+      "routing_latency_ms": 6.133949980721809,
+      "repository_build_ms": 63.74750006943941,
+      "hierarchy_depth": 1,
+      "parameter_overhead": 0.024475524475524476,
+      "routing_margin": 2.8840816020965576,
+      "within_task_radius": 0.6729865670204163,
+      "separation_ratio": 2.1427482682645165,
+      "condition_number_max": 1.0099895000457764
+    },
+    {
+      "task_count": 8,
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "candidate_reduction": 0.4375,
+      "retrieval_latency_ms": 0.4656031233025715,
+      "routing_latency_ms": 5.99318124295678,
+      "repository_build_ms": 100.82579986192286,
+      "hierarchy_depth": 3,
+      "parameter_overhead": 0.056856187290969896,
+      "routing_margin": 2.8619494438171387,
+      "within_task_radius": 0.6465500593185425,
+      "separation_ratio": 2.213246602152976,
+      "condition_number_max": 1.0105592012405396
+    },
+    {
+      "task_count": 16,
+      "routing_accuracy": 0.984375,
+      "candidate_count": 8.4375,
+      "candidate_reduction": 0.47265625,
+      "retrieval_latency_ms": 0.5992156184220221,
+      "routing_latency_ms": 5.7804765601758845,
+      "repository_build_ms": 180.3272000979632,
+      "hierarchy_depth": 4,
+      "parameter_overhead": 0.11384615384615385,
+      "routing_margin": 2.4679746627807617,
+      "within_task_radius": 0.6976062059402466,
+      "separation_ratio": 1.7688881218124914,
+      "condition_number_max": 1.0123263597488403
+    },
+    {
+      "task_count": 32,
+      "routing_accuracy": 0.8671875,
+      "candidate_count": 15.765625,
+      "candidate_reduction": 0.50732421875,
+      "retrieval_latency_ms": 0.7862046932132216,
+      "routing_latency_ms": 5.216927344008582,
+      "repository_build_ms": 292.95690008439124,
+      "hierarchy_depth": 5,
+      "parameter_overhead": 0.20424403183023873,
+      "routing_margin": 1.7698980569839478,
+      "within_task_radius": 0.6973352432250977,
+      "separation_ratio": 1.26904388827271,
+      "condition_number_max": 1.0111348628997803
+    },
+    {
+      "task_count": 50,
+      "routing_accuracy": 0.8899999856948853,
+      "candidate_count": 25.52,
+      "candidate_reduction": 0.48960000000000004,
+      "retrieval_latency_ms": 0.8823094924446195,
+      "routing_latency_ms": 3.6792990018147975,
+      "repository_build_ms": 584.8270999267697,
+      "hierarchy_depth": 6,
+      "parameter_overhead": 0.2801377726750861,
+      "routing_margin": 1.4838896989822388,
+      "within_task_radius": 0.6868593692779541,
+      "separation_ratio": 1.0801990664713108,
+      "condition_number_max": 1.008064866065979
+    }
+  ],
+  "router_ablation": [
+    {
+      "variant": "flat_baseline",
+      "routing_accuracy": 1.0,
+      "candidate_count": 8
+    },
+    {
+      "variant": "prototype_router",
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 20.750574971316382
+    },
+    {
+      "variant": "hierarchical_plus_ot",
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 23.833087529055774
+    },
+    {
+      "variant": "hierarchical_plus_tda",
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 31.42352498252876
+    },
+    {
+      "variant": "hierarchical_plus_sheaf",
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 29.904712515417486
+    },
+    {
+      "variant": "full_bonsai",
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 27.55445003276691
+    }
+  ],
+  "training_ablation": [
+    {
+      "seed": 7,
+      "variant": "hierarchical_plus_vib",
+      "task_aware_average_accuracy": 0.375,
+      "interference_drop_percentage_points": 0.0,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0081039667129517,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 7,
+      "variant": "hierarchical_no_vib",
+      "task_aware_average_accuracy": 0.375,
+      "interference_drop_percentage_points": 0.0,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0081039667129517,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 7,
+      "variant": "hierarchical_no_interference",
+      "task_aware_average_accuracy": 0.375,
+      "interference_drop_percentage_points": 0.0,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0081039667129517,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 7,
+      "variant": "hierarchical_tgrsc",
+      "task_aware_average_accuracy": 0.375,
+      "interference_drop_percentage_points": 0.0,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0081067085266113,
+      "rgsc_anchor_count": 4
+    },
+    {
+      "seed": 17,
+      "variant": "hierarchical_plus_vib",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.052083333333333336,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0119349956512451,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 17,
+      "variant": "hierarchical_no_vib",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.052083333333333336,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0119351148605347,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 17,
+      "variant": "hierarchical_no_interference",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.052083333333333336,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0119349956512451,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 17,
+      "variant": "hierarchical_tgrsc",
+      "task_aware_average_accuracy": 0.1484375,
+      "interference_drop_percentage_points": 0.020833333333333332,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0119374990463257,
+      "rgsc_anchor_count": 4
+    },
+    {
+      "seed": 27,
+      "variant": "hierarchical_plus_vib",
+      "task_aware_average_accuracy": 0.0703125,
+      "interference_drop_percentage_points": 0.07291666666666667,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0093086957931519,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 27,
+      "variant": "hierarchical_no_vib",
+      "task_aware_average_accuracy": 0.0703125,
+      "interference_drop_percentage_points": 0.07291666666666667,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0093086957931519,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 27,
+      "variant": "hierarchical_no_interference",
+      "task_aware_average_accuracy": 0.0703125,
+      "interference_drop_percentage_points": 0.07291666666666667,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0093086957931519,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 27,
+      "variant": "hierarchical_tgrsc",
+      "task_aware_average_accuracy": 0.0703125,
+      "interference_drop_percentage_points": 0.07291666666666667,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.00930917263031,
+      "rgsc_anchor_count": 4
+    },
+    {
+      "seed": 37,
+      "variant": "hierarchical_plus_vib",
+      "task_aware_average_accuracy": 0.203125,
+      "interference_drop_percentage_points": 0.09375,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0113164186477661,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 37,
+      "variant": "hierarchical_no_vib",
+      "task_aware_average_accuracy": 0.203125,
+      "interference_drop_percentage_points": 0.09375,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0113033056259155,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 37,
+      "variant": "hierarchical_no_interference",
+      "task_aware_average_accuracy": 0.203125,
+      "interference_drop_percentage_points": 0.09375,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0113164186477661,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 37,
+      "variant": "hierarchical_tgrsc",
+      "task_aware_average_accuracy": 0.203125,
+      "interference_drop_percentage_points": 0.09375,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0113155841827393,
+      "rgsc_anchor_count": 4
+    },
+    {
+      "seed": 47,
+      "variant": "hierarchical_plus_vib",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.010416666666666666,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0107176303863525,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 47,
+      "variant": "hierarchical_no_vib",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.010416666666666666,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0107167959213257,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 47,
+      "variant": "hierarchical_no_interference",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.010416666666666666,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0107176303863525,
+      "rgsc_anchor_count": 0
+    },
+    {
+      "seed": 47,
+      "variant": "hierarchical_tgrsc",
+      "task_aware_average_accuracy": 0.125,
+      "interference_drop_percentage_points": 0.010416666666666666,
+      "parameter_overhead": 0.03398058252427184,
+      "max_condition_number": 1.0107167959213257,
+      "rgsc_anchor_count": 4
+    }
+  ]
+}

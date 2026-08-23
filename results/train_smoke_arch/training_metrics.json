@@ -1,0 +1,22 @@
+{
+  "seed": 7,
+  "tasks": [
+    {
+      "task_id": 0,
+      "loss": 3.2899017333984375,
+      "task_aware_accuracy": 0.9375,
+      "task_free_accuracy": 0.9375,
+      "candidate_count": 1.0
+    },
+    {
+      "task_id": 1,
+      "loss": 5.570148944854736,
+      "task_aware_accuracy": 0.0,
+      "task_free_accuracy": 0.0,
+      "candidate_count": 2.0
+    }
+  ],
+  "parameter_overhead": 0.0099601593625498,
+  "hierarchy_depth": 1,
+  "task_count": 2
+}

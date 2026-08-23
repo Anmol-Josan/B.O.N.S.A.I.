@@ -1,0 +1,25 @@
+{
+  "seed": 7,
+  "continual_method": "atgtr",
+  "tasks": [
+    {
+      "task_id": 0,
+      "loss": 3.2898764610290527,
+      "task_aware_accuracy": 0.9375,
+      "task_free_accuracy": 0.9375,
+      "candidate_count": 1.0
+    },
+    {
+      "task_id": 1,
+      "loss": 5.570321083068848,
+      "task_aware_accuracy": 0.0,
+      "task_free_accuracy": 0.0,
+      "candidate_count": 2.0
+    }
+  ],
+  "parameter_overhead": 0.0099601593625498,
+  "consolidation_memory_elements": 2960,
+  "consolidation_memory_fraction": 2.9191321499013805,
+  "hierarchy_depth": 1,
+  "task_count": 2
+}

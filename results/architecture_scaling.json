@@ -1,0 +1,121 @@
+{
+  "scaling": [
+    {
+      "task_count": 4,
+      "routing_accuracy": 1.0,
+      "candidate_count": 4.0,
+      "candidate_reduction": 0.0,
+      "retrieval_latency_ms": 0.9293499169871211,
+      "routing_latency_ms": 21.78497501881793,
+      "repository_build_ms": 47.877300065010786,
+      "hierarchy_depth": 1,
+      "parameter_overhead": 0.5174825174825175,
+      "routing_margin": 2.8893234729766846,
+      "within_task_radius": 0.6735275983810425,
+      "separation_ratio": 2.1449183967529675,
+      "condition_number_max": 1.010828971862793
+    },
+    {
+      "task_count": 8,
+      "routing_accuracy": 0.875,
+      "candidate_count": 4.5,
+      "candidate_reduction": 0.4375,
+      "retrieval_latency_ms": 1.737899932777509,
+      "routing_latency_ms": 22.37357498961501,
+      "repository_build_ms": 80.08840004913509,
+      "hierarchy_depth": 3,
+      "parameter_overhead": 1.471571906354515,
+      "routing_margin": 2.861311197280884,
+      "within_task_radius": 0.6470930576324463,
+      "separation_ratio": 2.2108962254592215,
+      "condition_number_max": 1.009006142616272
+    },
+    {
+      "task_count": 16,
+      "routing_accuracy": 0.984375,
+      "candidate_count": 8.4375,
+      "candidate_reduction": 0.47265625,
+      "retrieval_latency_ms": 1.948843739228323,
+      "routing_latency_ms": 23.964887514011934,
+      "repository_build_ms": 191.43979996442795,
+      "hierarchy_depth": 4,
+      "parameter_overhead": 3.1507692307692308,
+      "routing_margin": 2.469646692276001,
+      "within_task_radius": 0.6976101398468018,
+      "separation_ratio": 1.7700765450587819,
+      "condition_number_max": 1.0087546110153198
+    },
+    {
+      "task_count": 32,
+      "routing_accuracy": 0.8671875,
+      "candidate_count": 15.765625,
+      "candidate_reduction": 0.50732421875,
+      "retrieval_latency_ms": 5.164790614799131,
+      "routing_latency_ms": 21.782503099530004,
+      "repository_build_ms": 344.5184000302106,
+      "hierarchy_depth": 5,
+      "parameter_overhead": 5.814323607427056,
+      "routing_margin": 1.7708566188812256,
+      "within_task_radius": 0.6974995732307434,
+      "separation_ratio": 1.2694320447242764,
+      "condition_number_max": 1.0094521045684814
+    },
+    {
+      "task_count": 50,
+      "routing_accuracy": 0.8899999856948853,
+      "candidate_count": 25.52,
+      "candidate_reduction": 0.48960000000000004,
+      "retrieval_latency_ms": 7.567933998070657,
+      "routing_latency_ms": 24.45169998332858,
+      "repository_build_ms": 598.7627999857068,
+      "hierarchy_depth": 6,
+      "parameter_overhead": 8.050516647531573,
+      "routing_margin": 1.4824002981185913,
+      "within_task_radius": 0.6866921782493591,
+      "separation_ratio": 1.0793775909154786,
+      "condition_number_max": 1.0101292133331299
+    }
+  ],
+  "router_ablation": [
+    {
+      "variant": "flat_baseline",
+      "routing_accuracy": 1.0,
+      "candidate_count": 8
+    },
+    {
+      "variant": "prototype_router",
+      "routing_accuracy": 0.875,
+      "candidate_count": 54.0,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 28.21253749425523
+    },
+    {
+      "variant": "hierarchical_plus_ot",
+      "routing_accuracy": 0.875,
+      "candidate_count": 54.0,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 28.182587469927967
+    },
+    {
+      "variant": "hierarchical_plus_tda",
+      "routing_accuracy": 0.875,
+      "candidate_count": 54.0,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 34.69525001128204
+    },
+    {
+      "variant": "hierarchical_plus_sheaf",
+      "routing_accuracy": 0.875,
+      "candidate_count": 54.0,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 41.2990250333678
+    },
+    {
+      "variant": "full_bonsai",
+      "routing_accuracy": 0.875,
+      "candidate_count": 54.0,
+      "hierarchy_depth": 3,
+      "routing_latency_ms": 45.54812496644445
+    }
+  ]
+}

@@ -1,0 +1,562 @@
+{
+  "config": {
+    "data_root": "data\\cifar100",
+    "dataset": "cifar100",
+    "methods": [
+      "ER",
+      "DER++",
+      "ER-ACE",
+      "ATGFR"
+    ],
+    "seeds": [
+      7
+    ],
+    "order_count": 1,
+    "epochs_per_task": 1,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "memory_per_task": 10,
+    "train_samples_per_class": 2,
+    "test_samples_per_class": 2,
+    "replay_weight": 1.0,
+    "distill_weight": 1.0,
+    "feature_weight": 0.25,
+    "temperature": 2.0,
+    "relation_floor": 0.35,
+    "drift_budget": 0.05,
+    "thermostat_gain": 2.0,
+    "device": "cpu"
+  },
+  "records": [
+    {
+      "dataset": "cifar100",
+      "method": "ER",
+      "seed": 7,
+      "order_id": 0,
+      "task_order": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "num_tasks": 10,
+      "train_samples_per_class": 2,
+      "test_samples_per_class": 2,
+      "memory_per_task": 10,
+      "memory_images": 100,
+      "memory_scalar_elements": 308580,
+      "parameter_count": 122884,
+      "parameter_overhead_percent": 0.0,
+      "average_accuracy": 0.01,
+      "forgetting": 0.011111111111111112,
+      "task_free_average_accuracy": 0.01,
+      "task_free_forgetting": 0.011111111111111112,
+      "wall_time_seconds": 4.672274899901822,
+      "task_seconds": [
+        0.2847812999971211,
+        0.14160219999030232,
+        0.25543870008550584,
+        0.38942459993995726,
+        0.43909070012159646,
+        0.457792499801144,
+        0.49888979992829263,
+        0.5529471000190824,
+        0.9179275999777019,
+        0.733961199875921
+      ],
+      "train_steps": 10,
+      "accuracy_history": [
+        [
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.1,
+          0.0
+        ],
+        [
+          0.05,
+          0.1,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.05,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.05,
+          0.05,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "dataset": "cifar100",
+      "method": "DER++",
+      "seed": 7,
+      "order_id": 0,
+      "task_order": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "num_tasks": 10,
+      "train_samples_per_class": 2,
+      "test_samples_per_class": 2,
+      "memory_per_task": 10,
+      "memory_images": 100,
+      "memory_scalar_elements": 318580,
+      "parameter_count": 122884,
+      "parameter_overhead_percent": 0.0,
+      "average_accuracy": 0.01,
+      "forgetting": 0.011111111111111112,
+      "task_free_average_accuracy": 0.01,
+      "task_free_forgetting": 0.011111111111111112,
+      "wall_time_seconds": 4.11714019998908,
+      "task_seconds": [
+        0.1337538999505341,
+        0.23875520005822182,
+        0.2816065000370145,
+        0.3537737999577075,
+        0.26857910002581775,
+        0.4170002001337707,
+        0.4120598000008613,
+        0.6370403999462724,
+        0.6300234000664204,
+        0.7435259001795202
+      ],
+      "train_steps": 10,
+      "accuracy_history": [
+        [
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.1,
+          0.0
+        ],
+        [
+          0.05,
+          0.1,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.05,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.05,
+          0.05,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "dataset": "cifar100",
+      "method": "ER-ACE",
+      "seed": 7,
+      "order_id": 0,
+      "task_order": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "num_tasks": 10,
+      "train_samples_per_class": 2,
+      "test_samples_per_class": 2,
+      "memory_per_task": 10,
+      "memory_images": 100,
+      "memory_scalar_elements": 308580,
+      "parameter_count": 122884,
+      "parameter_overhead_percent": 0.0,
+      "average_accuracy": 0.02,
+      "forgetting": 0.02222222222222222,
+      "task_free_average_accuracy": 0.02,
+      "task_free_forgetting": 0.02222222222222222,
+      "wall_time_seconds": 3.381497499998659,
+      "task_seconds": [
+        0.10272790002636611,
+        0.14920430001802742,
+        0.2426511999219656,
+        0.24639019998721778,
+        0.2538798002060503,
+        0.35453260014764965,
+        0.40203500003553927,
+        0.4552169998642057,
+        0.5726044001057744,
+        0.6019649000372738
+      ],
+      "train_steps": 10,
+      "accuracy_history": [
+        [
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.1
+        ],
+        [
+          0.05,
+          0.05,
+          0.0,
+          0.05,
+          0.0
+        ],
+        [
+          0.05,
+          0.05,
+          0.0,
+          0.05,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.15,
+          0.0,
+          0.1,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.05,
+          0.0,
+          0.15,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.05,
+          0.0,
+          0.1,
+          0.0,
+          0.05,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.05,
+          0.0,
+          0.1,
+          0.0,
+          0.05,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "dataset": "cifar100",
+      "method": "ATGFR",
+      "seed": 7,
+      "order_id": 0,
+      "task_order": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "num_tasks": 10,
+      "train_samples_per_class": 2,
+      "test_samples_per_class": 2,
+      "memory_per_task": 10,
+      "memory_images": 100,
+      "memory_scalar_elements": 331380,
+      "parameter_count": 122884,
+      "parameter_overhead_percent": 0.0,
+      "average_accuracy": 0.01,
+      "forgetting": 0.011111111111111112,
+      "task_free_average_accuracy": 0.01,
+      "task_free_forgetting": 0.011111111111111112,
+      "wall_time_seconds": 4.2524033999070525,
+      "task_seconds": [
+        0.11472369986586273,
+        0.17571109998971224,
+        0.20251970016397536,
+        0.24152950011193752,
+        0.31631819996982813,
+        0.39519269997254014,
+        0.521188999991864,
+        0.6125086999963969,
+        0.7699492000974715,
+        0.9024111998733133
+      ],
+      "train_steps": 10,
+      "accuracy_history": [
+        [
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.1,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.05,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "method": "ATGFR",
+      "order_id": 0,
+      "runs": 1,
+      "average_accuracy_mean": 0.009999999776482582,
+      "average_accuracy_std": 0.0,
+      "forgetting_mean": 0.011111111380159855,
+      "forgetting_std": 0.0,
+      "wall_time_seconds_mean": 4.252403259277344,
+      "memory_scalar_elements": 331380
+    },
+    {
+      "method": "DER++",
+      "order_id": 0,
+      "runs": 1,
+      "average_accuracy_mean": 0.009999999776482582,
+      "average_accuracy_std": 0.0,
+      "forgetting_mean": 0.011111111380159855,
+      "forgetting_std": 0.0,
+      "wall_time_seconds_mean": 4.117140293121338,
+      "memory_scalar_elements": 318580
+    },
+    {
+      "method": "ER",
+      "order_id": 0,
+      "runs": 1,
+      "average_accuracy_mean": 0.009999999776482582,
+      "average_accuracy_std": 0.0,
+      "forgetting_mean": 0.011111111380159855,
+      "forgetting_std": 0.0,
+      "wall_time_seconds_mean": 4.672275066375732,
+      "memory_scalar_elements": 308580
+    },
+    {
+      "method": "ER-ACE",
+      "order_id": 0,
+      "runs": 1,
+      "average_accuracy_mean": 0.019999999552965164,
+      "average_accuracy_std": 0.0,
+      "forgetting_mean": 0.02222222276031971,
+      "forgetting_std": 0.0,
+      "wall_time_seconds_mean": 3.381497383117676,
+      "memory_scalar_elements": 308580
+    }
+  ]
+}
