@@ -1,0 +1,127 @@
+\relax 
+\citation{mccloskey1989catastrophic}
+\citation{kirkpatrick2017ewc}
+\citation{zenke2017si}
+\citation{lopezpaz2017gem}
+\citation{saha2021gpm}
+\citation{mallya2018packnet}
+\citation{rusu2016progressive}
+\citation{rolnick2019replay}
+\citation{buzzega2020der}
+\citation{rebuffi2017icarl}
+\citation{shin2017generative}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\newlabel{sec:introduction}{{I}{1}{}{section.1}{}}
+\citation{vandeven2019three}
+\citation{delange2023survey}
+\citation{kirkpatrick2017ewc}
+\citation{zenke2017si}
+\citation{lopezpaz2017gem}
+\citation{saha2021gpm}
+\citation{mallya2018packnet}
+\citation{rusu2016progressive}
+\citation{rolnick2019replay}
+\citation{rebuffi2017icarl}
+\citation{buzzega2020der}
+\citation{shin2017generative}
+\citation{caccia2022representation}
+\citation{wang2022foster}
+\citation{houlsby2019adapters}
+\citation{alemi2017vib}
+\citation{rabin2011barycenter}
+\citation{edelsbrunner2002persistence}
+\citation{alemi2017vib}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{}\protected@file@percent }
+\newlabel{sec:related}{{II}{2}{}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Continual-learning scenarios and evaluation}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Regularization, gradient constraints, and isolation}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Replay, distillation, and parameter-efficient transfer}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}BONSAI Architecture and ATGFR}{2}{}\protected@file@percent }
+\newlabel{sec:method}{{III}{2}{}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Problem definition and metrics}{2}{}\protected@file@percent }
+\newlabel{eq:forgetting}{{2}{2}{}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Modular representation and routing}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Shared low-rank task adaptation}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Consolidation controls}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Adaptive Task-Graph Functional Replay}{3}{}\protected@file@percent }
+\newlabel{eq:atgfr}{{12}{3}{}{equation.12}{}}
+\newlabel{eq:thermostat}{{13}{3}{}{equation.13}{}}
+\newlabel{eq:memory}{{14}{3}{}{equation.14}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Protocol}{3}{}\protected@file@percent }
+\newlabel{sec:protocol}{{IV}{3}{}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Datasets and task streams}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The modular \textsc  {BONSAI}{} data path. The ATGFR side path stores training coreset inputs, old logits, and old features; task-graph relations modulate replay pressure rather than appearing as an unbounded test-time component.}}{4}{}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{4}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Compared architectures}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Implementation and reproducibility}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Results}{4}{}\protected@file@percent }
+\newlabel{sec:results}{{V}{4}{}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Primary new-version comparison}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Matched real-image replay comparison}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Task-order sensitivity}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Architectural comparison and expected trade-offs. The final column states the evidence available in this paper rather than implying universal rankings.}}{5}{}\protected@file@percent }
+\newlabel{tab:architectures}{{I}{5}{}{table.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Five-seed matched comparison on the new modular structured-image stream. Values are mean plus or minus population standard deviation. Memory is total consolidation plus replay state divided by model parameters.}}{5}{}\protected@file@percent }
+\newlabel{tab:primary}{{II}{5}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Robustness across small and larger regimes}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Scaling and numerical stability}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Matched consolidation ablation}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Factorial ATGFR component ablation}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Primary five-seed new-version comparison. \textsc  {ATGFR}{} is the only matched variant with high final accuracy and negative peak-before-final forgetting. Error bars are population standard deviations.}}{6}{}\protected@file@percent }
+\newlabel{fig:primary}{{2}{6}{}{figure.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Matched Split-CIFAR-100 replay study. Means and population standard deviations aggregate two seeds and three predeclared task orders. All methods store 20 images per task; scalar state includes images, labels, and any stored logits/features.}}{6}{}\protected@file@percent }
+\newlabel{tab:realreplay}{{III}{6}{}{table.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Matched real-image replay study on Split-CIFAR-100. ATGFR has the highest accuracy in this low-data protocol, with storage and wall-clock costs reported rather than omitted.}}{6}{}\protected@file@percent }
+\newlabel{fig:realreplay}{{3}{6}{}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Existing architectures and legacy context}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces All three predeclared task orders in the Split-CIFAR-100 study. Error bars are standard deviations over the two seeds.}}{7}{}\protected@file@percent }
+\newlabel{fig:orders}{{4}{7}{}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces All four robustness cells: task-aware accuracy, mean plus or minus standard deviation over three seeds.}}{7}{}\protected@file@percent }
+\newlabel{tab:robustness}{{IV}{7}{}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Factorial ATGFR ablation on the structured-image stream. All values are means over three seeds; the complete raw rows are retained in the JSON artifact.}}{7}{}\protected@file@percent }
+\newlabel{tab:components}{{V}{7}{}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-I}}Accuracy-memory frontier}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Discussion}{7}{}\protected@file@percent }
+\newlabel{sec:discussion}{{VI}{7}{}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Why functional replay helps}{7}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Robustness across few/many tasks and few/many input features. No cell is removed after inspecting results. The right panel exposes the accuracy-memory trade-off.}}{8}{}\protected@file@percent }
+\newlabel{fig:robustness}{{5}{8}{}{figure.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Repository scaling from 4 to 50 tasks. Retrieval work is reduced but still grows with repository size; the local SPD metrics remain well conditioned.}}{8}{}\protected@file@percent }
+\newlabel{fig:scaling}{{6}{8}{}{figure.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}What the expanded evidence resolves}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Why the result is not yet universal}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Reproducibility and engineering corrections}{8}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Matched consolidation ablation against the modular controls. The factorial component study is shown separately in Fig.~\ref {fig:components}.}}{9}{}\protected@file@percent }
+\newlabel{fig:ablation}{{7}{9}{}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Factorial ATGFR component ablation. The result supports replay but does not justify claiming that every exotic descriptor improves accuracy.}}{9}{}\protected@file@percent }
+\newlabel{fig:components}{{8}{9}{}{figure.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Limitations and Future Work}{9}{}\protected@file@percent }
+\newlabel{sec:limitations}{{VII}{9}{}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{9}{}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibdata{references}
+\bibcite{mccloskey1989catastrophic}{1}
+\bibcite{kirkpatrick2017ewc}{2}
+\bibcite{zenke2017si}{3}
+\bibcite{lopezpaz2017gem}{4}
+\bibcite{saha2021gpm}{5}
+\bibcite{mallya2018packnet}{6}
+\bibcite{rusu2016progressive}{7}
+\bibcite{rolnick2019replay}{8}
+\bibcite{buzzega2020der}{9}
+\bibcite{rebuffi2017icarl}{10}
+\bibcite{shin2017generative}{11}
+\bibcite{vandeven2019three}{12}
+\bibcite{delange2023survey}{13}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Corrected legacy ResNet-18 context comparison. The established baselines and legacy \textsc  {BONSAI}{} are intentionally separated from the capacity-mismatched new modular results.}}{10}{}\protected@file@percent }
+\newlabel{fig:legacy}{{9}{10}{}{figure.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Primary-seed accuracy-memory frontier. X markers are method means; circles are individual seeds.}}{10}{}\protected@file@percent }
+\newlabel{fig:frontier}{{10}{10}{}{figure.10}{}}
+\@writefile{toc}{\contentsline {section}{References}{10}{}\protected@file@percent }
+\bibcite{caccia2022representation}{14}
+\bibcite{wang2022foster}{15}
+\bibcite{houlsby2019adapters}{16}
+\bibcite{alemi2017vib}{17}
+\bibcite{rabin2011barycenter}{18}
+\bibcite{edelsbrunner2002persistence}{19}
+\gdef \@abspage@last{11}
