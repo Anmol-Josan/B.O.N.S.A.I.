@@ -1,37 +1,24 @@
-# BONSAI: Task-Graph Geometry and Adaptive Functional Replay for Continual Learning
+# BONSAI: A Scoped Study of Adaptive Task-Graph Functional Replay
 
 **Research manuscript generated from the BONSAI implementation and reproducible artifacts**  
 Version: 22 August 2026
 
 ## Abstract
 
-**Background.** Continual learning requires a model to acquire new tasks while
-preserving previously learned functions under changing data distributions.
-Parameter regularization alone can protect weights yet still permit large
-input-to-output drift, while replay can become wasteful when every historical
-task receives the same training pressure. **Method.** We present BONSAI, a
-modular continual-learning system that couples a variational information
-bottleneck, cached task-graph descriptors, hierarchical retrieval, a bounded
-local Riemannian metric, and shared low-rank task adapters. Its forgetting-
-focused extension, Adaptive Task-Graph Functional Replay (ATGFR), stores a
-class-balanced training coreset together with old logits and latent features.
-Replay is weighted by cached task similarity and amplified only when measured
-old-task feature drift exceeds a budget. We additionally implement and compare
-Topology-Gated Riemannian Subspace Consolidation (TGRSC) and Adaptive
-Task-Graph Trust-Region (ATGTR). **Results.** On a four-task, twelve-class
-structured image stream evaluated over five fixed seeds, the new modular
-diagonal control obtains 0.1000 mean task-aware accuracy and 0.3778 forgetting;
-TGRSC obtains 0.1181 and 0.3537; ATGTR obtains 0.1000 and 0.3778; ATGFR
-obtains 0.6333 and -0.2000 after mass-preserving relation normalization under
-the standard peak-before-final forgetting definition. ATGFR also improves all
-four cells of a predeclared grid crossing 2/8 tasks with 8/128 input features.
-A matched real-image mechanism study on Split-CIFAR-100 uses one
-CompactCIFARNet, 20 images per task, two seeds, and three task orders; ATGFR
-reaches 0.0358 accuracy versus 0.0321 for ER, with comparable forgetting but
-larger scalar replay state. A factorial component ablation shows replay is
-supported while full OT/H0/thermostat dominance is not. The implementation
-passes 94 tests. The evidence supports ATGFR as a scoped stability mechanism,
-not as a solved continual-learning system.
+**Background.** Continual learning requires preserving useful functions while
+new tasks arrive. **Method.** We study Adaptive Task-Graph Functional Replay
+(ATGFR), a bounded-memory replay mechanism built on the BONSAI modular
+implementation. ATGFR stores a class-balanced training coreset with old logits
+and latent features, weights replay by cached task relations, and increases
+replay pressure when measured old-feature drift exceeds a budget. **Results.**
+On a four-task, twelve-class structured-image stream evaluated over five fixed
+seeds, the matched diagonal control obtains 0.1000 task-aware accuracy and
+0.3778 forgetting; ATGFR obtains 0.6333 and -0.2000 after mass-preserving
+relation normalization. A matched Split-CIFAR-100 study is a low-data pilot:
+ATGFR reaches 0.0358 accuracy versus 0.0321 for ER, with comparable
+forgetting. Task-free routing, synthetic scaling, and geometry-specific
+modules are secondary diagnostics. The evidence supports ATGFR as a scoped
+functional-replay result, not a solved continual-learning system.
 
 **Keywords:** continual learning, catastrophic forgetting, replay, knowledge
 distillation, task graphs, Riemannian geometry, variational information
@@ -84,11 +71,10 @@ ATGFR adds adaptive functional replay: class-balanced training examples,
 stored logits, stored latent features, task-graph weighting, and a feature-drift
 thermostat.
 
-The paper makes the following contributions.
+The paper makes the following scoped contributions.
 
-1. It gives a complete, executable specification of the modular BONSAI
-   architecture, including its VIB, repository, geometry, hierarchy, sheaf,
-   adapter, and continual-learning components.
+1. It gives an executable specification of the BONSAI replay substrate and
+separates task-aware primary metrics from task-free routing diagnostics.
 2. It introduces ATGFR as a system-level combination of train-only coreset
    replay, functional distillation, latent-feature anchoring, task-graph
    relation weighting, and drift-triggered replay control. The primitives are
@@ -97,10 +83,8 @@ The paper makes the following contributions.
 3. It corrects two evaluation/engineering hazards that can inflate claims:
    forgetting uses the maximum score attained before the final checkpoint, and
    disabled diagonal protection retains no unused EWC state.
-4. It reports matched multi-seed experiments, a four-cell task/feature
-   robustness grid, scaling diagnostics through 50 repository tasks, and a
-   current-backbone comparison against EWC, SI, PackNet, and PNN with explicit
-   task-free scope boundaries.
+4. It reports a predeclared multi-seed structured-image comparison, a low-data
+Split-CIFAR-100 pilot, and component ablations that preserve negative results.
 
 The remainder of the paper first positions BONSAI among CL methods, then gives
 the mathematical formulation and implementation, describes the evaluation
