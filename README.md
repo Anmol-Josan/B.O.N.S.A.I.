@@ -2,6 +2,26 @@
 
 BONSAI (Bottleneck-guided Orthogonal Network Subgraph Allocation for Incremental learning) is a research implementation for dynamic neural subgraph rewiring with variational information-bottleneck regularization.
 
+## Research scope and golden path
+
+The repository includes both the evidence-backed paper path and a broader
+experimental sandbox. The minimum supported claim is scoped to ATGFR's
+functional replay mechanism under bounded-memory task-incremental learning;
+the project does not claim state-of-the-art continual learning or solved
+task-free routing. See [docs/RESEARCH_SCOPE.md](docs/RESEARCH_SCOPE.md) for
+the claim boundary, metric definitions, evidence status, and reporting rules.
+
+The canonical five-seed comparison is reproducible with:
+
+```powershell
+./scripts/reproduce_paper.ps1
+```
+
+Add `-IncludeCifarPilot` only when the CIFAR-100 data is available. Synthetic
+latent-cloud, TGRSC, ATGTR, OT/TDA/sheaf, and routing experiments are retained
+as diagnostics or exploratory variants and must not be presented as additional
+validated contributions without a matched ablation.
+
 The repository is intentionally developed test-first. Core components are small, deterministic, and usable independently before launching benchmark-scale experiments.
 
 ## Quick start

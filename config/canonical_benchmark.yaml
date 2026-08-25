@@ -1,0 +1,26 @@
+# Canonical paper path. Keep exploratory runs in separate output directories.
+name: canonical_structured_image
+seeds: [7, 17, 27, 37, 47]
+num_tasks: 4
+classes_per_task: 3
+train_samples_per_class: 24
+test_samples_per_class: 12
+image_size: 32
+noise: 0.1
+epochs: 5
+batch_size: 32
+primary_metrics:
+  - task_aware_accuracy
+  - peak_before_final_forgetting
+secondary_metrics:
+  - task_free_accuracy
+  - task_route_accuracy
+matched_baselines:
+  - diagonal
+  - TGRSC
+  - ATGTR
+  - ATGFR
+  - EWC
+  - SI
+  - PackNet
+  - PNN
